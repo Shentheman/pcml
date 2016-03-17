@@ -98,10 +98,10 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES pcml
-#  CATKIN_DEPENDS roscpp
-#  DEPENDS system_lib
+  INCLUDE_DIRS include
+  LIBRARIES pcml
+  CATKIN_DEPENDS roscpp
+  DEPENDS system_lib
 )
 
 ###########
@@ -111,14 +111,16 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
+include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
-# add_library(pcml
-#   src/${PROJECT_NAME}/pcml.cpp
-# )
+add_library(pcml
+  include/${PROJECT_NAME}/data/cad120_reader.h
+  src/data/cad120_reader.cpp
+)
 
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -127,6 +129,7 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(pcml_node src/pcml_node.cpp)
+add_executable(test_cad120 src/test_cad120.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -136,6 +139,12 @@ include_directories(
 # target_link_libraries(pcml_node
 #   ${catkin_LIBRARIES}
 # )
+target_link_libraries(pcml
+    ${catkin_LIBRARIES}
+)
+target_link_libraries(test_cad120
+    pcml
+)
 
 #############
 ## Install ##
