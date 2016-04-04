@@ -8,9 +8,49 @@
 #include <stdlib.h>
 
 #include <sensor_msgs/PointCloud2.h>
+#include <visualization_msgs/MarkerArray.h>
 
 namespace pcml
 {
+
+
+const char* CAD120Reader::joint_names_[num_joints_] =
+{
+    "HEAD",
+    "NECK",
+    "TORSO",
+    "LEFT_SHOULDER",
+    "LEFT_ELBOW",
+    "RIGHT_SHOULDER",
+    "RIGHT_ELBOW",
+    "LEFT_HIP",
+    "LEFT_KNEE",
+    "RIGHT_HIP",
+    "RIGHT_KNEE",
+    "LEFT_HAND",
+    "RIGHT_HAND",
+    "LEFT_FOOT",
+    "RIGHT_FOOT",
+};
+
+const int CAD120Reader::skeletons_[num_skeletons_][2] =
+{
+     0,  1,
+     1,  2,
+     2,  3,
+     3,  4,
+     2,  5,
+     5,  6,
+     2,  7,
+     7,  8,
+     2,  9,
+     9, 10,
+     4, 11,
+     6, 12,
+     8, 13,
+    10, 14,
+};
+
 
 bool CAD120Reader::existDirectory(const std::string& directory)
 {
@@ -27,6 +67,8 @@ CAD120Reader::CAD120Reader()
 CAD120Reader::CAD120Reader(const std::string& directory)
 {
     rgbd_fp_ = NULL;
+    joint_fp_ = NULL;
+    object_fps_.clear();
 
     setDirectory(directory);
 }
@@ -184,25 +226,43 @@ void CAD120Reader::startReadFrames(int subject, int action, int video)
 
     const Video& v = subjects_[subject].actions[action].videos[video];
     char filename[NAME_MAX + 1];
+
+    // rgbd
     sprintf(filename, "%s/Subject%d_rgbd_rawtext/%s/%s_rgbd.txt",
             directory_.c_str(), subjects_[subject].subject_id, subjects_[subject].actions[action].action_id.c_str(), v.id.c_str());
-
     rgbd_fp_ = fopen(filename, "r");
+
+    // joints
+    sprintf(filename, "%s/Subject%d_annotations/%s/%s.txt",
+            directory_.c_str(), subjects_[subject].subject_id, subjects_[subject].actions[action].action_id.c_str(), v.id.c_str());
+    joint_fp_ = fopen(filename, "r");
+
+    // object
+    object_fps_.resize( v.object_ids.size() );
+    object_bounding_boxes_.resize( v.object_ids.size() );
+    object_transformations_.resize( v.object_ids.size() );
+    for (int i=0; i<v.object_ids.size(); i++)
+    {
+        sprintf(filename, "%s/Subject%d_annotations/%s/%s_obj%d.txt",
+                directory_.c_str(), subjects_[subject].subject_id, subjects_[subject].actions[action].action_id.c_str(), v.id.c_str(), v.object_ids[i]);
+        object_fps_[i] = fopen(filename, "r");
+    }
 }
 
 bool CAD120Reader::readNextFrame()
 {
+    // RGBD data
     // 6(number+comma) * 4(channels) * 640(X_RES) * 480(Y_RES) = 7372800 Bytes = 7 MB
     static const int buffer_size = 6 * 4 * X_RES * Y_RES;
     static char buffer[buffer_size];
 
-    if (fgets(buffer, buffer_size, rgbd_fp_) == NULL)
+    if (fgets(buffer, buffer_size, rgbd_fp_) == NULL || strcmp(buffer, "\n") == 0)
         return false;
+
+    int* ptr = (int*)rgbd_image_;
 
     // first integer is the frame number
     char* p = strtok(buffer, ",\n");
-    int* ptr = (int*)rgbd_image_;
-
     while (true)
     {
         p = strtok(NULL, ",\n");
@@ -210,6 +270,71 @@ bool CAD120Reader::readNextFrame()
 
         *ptr = atoi(p);
         ptr++;
+    }
+
+
+    // joint data
+    if (fgets(buffer, buffer_size, joint_fp_) != NULL)
+    {
+        // first integer is the frame number
+        p = strtok(buffer, ",\n");
+        if (strcmp(p, "END") != 0)
+        {
+            for (int i=0; i<num_joints_; i++)
+            {
+                if (i < num_joints_with_ori_)
+                {
+                    for (int j=0; j<3; j++)
+                    {
+                        for (int k=0; k<3; k++)
+                        {
+                            p = strtok(NULL, ",\n");
+                            joint_ori_[i](j,k) = atof(p);
+                        }
+                    }
+                    p = strtok(NULL, ",\n");
+                    joint_ori_confidence_[i] = atoi(p);
+                }
+
+                for (int j=0; j<3; j++)
+                {
+                    p = strtok(NULL, ",\n");
+                    joint_pos_[i](j) = atof(p);
+                }
+                p = strtok(NULL, ",\n");
+                joint_pos_confidence_[i] = atoi(p);
+            }
+        }
+    }
+
+
+    // object data
+    const Video& v = subjects_[subject_].actions[action_].videos[video_];
+    for (int i=0; i<v.object_ids.size(); i++)
+    {
+        if (fgets(buffer, buffer_size, object_fps_[i]) != NULL)
+        {
+            // first two integer is the frame number and the object id
+            p = strtok(buffer, ",\n");
+            p = strtok(NULL, ",\n");
+
+            // bounding box
+            for (int j=0; j<4; j++)
+            {
+                p = strtok(NULL, ",\n");
+                object_bounding_boxes_[i](j) = atoi(p);
+            }
+
+            // transformation
+            for (int j=0; j<2; j++)
+            {
+                for (int k=0; k<3; k++)
+                {
+                    p = strtok(NULL, ",\n");
+                    object_transformations_[i](j,k) = atof(p);
+                }
+            }
+        }
     }
 
     return true;
@@ -222,13 +347,46 @@ void CAD120Reader::finishReadFrames()
         fclose(rgbd_fp_);
         rgbd_fp_ = NULL;
     }
+
+    if (joint_fp_ != NULL)
+    {
+        fclose(joint_fp_);
+        joint_fp_ = NULL;
+    }
+
+    for (int i=0; i<object_fps_.size(); i++)
+    {
+        if (object_fps_[i] != NULL)
+            fclose(object_fps_[i]);
+    }
+    object_fps_.clear();
+
+
+    // rviz object marker cleanup
+    visualization_msgs::MarkerArray marker_array;
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "/world";
+    marker.header.stamp = ros::Time::now();
+    marker.ns = "objects";
+    marker.action = visualization_msgs::Marker::DELETE;
+    for (int i=0; i<object_bounding_boxes_.size() * 2; i++) // 0 ~ (n-1) for line list, n ~ (2n-1) for text
+    {
+        marker.id = i;
+        marker_array.markers.push_back(marker);
+    }
+    marker_array_publisher_.publish(marker_array);
 }
 
 void CAD120Reader::setPointCloudTopic(const std::string& topic)
 {
     ros::NodeHandle n;
-
     point_cloud_publisher_ = n.advertise<sensor_msgs::PointCloud2>(topic, 100);
+}
+
+void CAD120Reader::setMarkerArrayTopic(const std::string& topic)
+{
+    ros::NodeHandle n;
+    marker_array_publisher_ = n.advertise<visualization_msgs::MarkerArray>(topic, 100);
 }
 
 void CAD120Reader::renderPointCloud()
@@ -247,7 +405,7 @@ void CAD120Reader::renderPointCloud()
     point_cloud.width = X_RES;
 
     point_cloud.is_bigendian = false;
-    point_cloud.is_dense = false;
+    point_cloud.is_dense = true;
 
     point_cloud.point_step = 16;
     point_cloud.row_step = 16 * X_RES;
@@ -275,9 +433,11 @@ void CAD120Reader::renderPointCloud()
     {
         for (int j=0; j<X_RES; j++)
         {
-            /*
+            /* in the downloaded code
+            cloud.points.at(index).y = IMAGE[x][y][3];
             cloud.points.at(index).x = (x - 640 * 0.5) * cloud.points.at(index).y * 1.1147 / 640;
             cloud.points.at(index).z = (480 * 0.5 - y) * cloud.points.at(index).y * 0.8336 / 480;
+            globalTransform.transformPointCloudInPlaceAndSetOrigin(cloud);
             */
 
             Eigen::Vector4d v;
@@ -304,20 +464,6 @@ void CAD120Reader::renderPointCloud()
             for (int k=0; k<4; k++)
                 point_cloud.data.push_back(buffer[k]);
 
-            /*
-            *fptr = (double)j / X_RES;
-            for (int k=0; k<4; k++)
-                point_cloud.data.push_back(buffer[k]);
-
-            *fptr = (double)i / X_RES;
-            for (int k=0; k<4; k++)
-                point_cloud.data.push_back(buffer[k]);
-
-            *fptr = (double)rgbd_image_[i][j][3] / 65535;
-            for (int k=0; k<4; k++)
-                point_cloud.data.push_back(buffer[k]);
-                */
-
             point_cloud.data.push_back(rgbd_image_[i][j][2]);
             point_cloud.data.push_back(rgbd_image_[i][j][1]);
             point_cloud.data.push_back(rgbd_image_[i][j][0]);
@@ -326,6 +472,253 @@ void CAD120Reader::renderPointCloud()
     }
 
     point_cloud_publisher_.publish(point_cloud);
+}
+
+void CAD120Reader::renderSkeleton()
+{
+    const Eigen::Matrix4d& transform = subjects_[subject_].actions[action_].videos[video_].global_transform;
+
+    visualization_msgs::MarkerArray marker_array;
+    visualization_msgs::Marker marker;
+
+    marker.header.frame_id = "/world";
+    marker.header.stamp = ros::Time::now();
+
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.type = visualization_msgs::Marker::LINE_LIST;
+
+    marker.pose.position.x = 0.;
+    marker.pose.position.y = 0.;
+    marker.pose.position.z = 0.;
+    marker.pose.orientation.w = 1.;
+    marker.pose.orientation.x = 0.;
+    marker.pose.orientation.y = 0.;
+    marker.pose.orientation.z = 0.;
+
+    marker.ns = "skeleton";
+
+    marker.scale.x = 0.03; // 3 cm
+
+    marker.color.r = 1.;
+    marker.color.g = 1.;
+    marker.color.b = 0.;
+    marker.color.a = 1.;
+
+    for (int i=0; i<num_skeletons_; i++)
+    {
+        marker.id = i;
+
+        for (int j=0; j<2; j++)
+        {
+            // The transformation is applied here
+
+            /* in the downloaded code
+            for (size_t i = 0; i < jointList.size(); i++) {
+                    //pcl::PointXYZ p1 (data[i][9],data[i][11],data[i][10]);
+                    pcl::PointXYZ pt ;
+                    pt.x = data[jointList.at(i)][9];
+                    pt.y = data[jointList.at(i)][11];
+                    pt.z = data[jointList.at(i)][10];
+
+                    globalTransform.transformPointInPlace(pt);
+                    transformed_joints.push_back(pt);
+            }
+            for (size_t i = 0; i < pos_jointList.size(); i++) {
+                    //pcl::PointXYZ p1 (data[i][9],data[i][11],data[i][10]);
+                    pcl::PointXYZ pt ;
+                    pt.x = pos_data[pos_jointList.at(i)][0];
+                    pt.y = pos_data[pos_jointList.at(i)][2];
+                    pt.z = pos_data[pos_jointList.at(i)][1];
+
+                    globalTransform.transformPointInPlace(pt);
+                    transformed_joints.push_back(pt);
+            }
+            */
+
+            const int joint_id = skeletons_[i][j];
+            Eigen::Vector4d v;
+            v << joint_pos_[joint_id], 1.0;
+            std::swap(v(1), v(2));
+
+            v = transform * v;
+            v(0) /= v(3);
+            v(1) /= v(3);
+            v(2) /= v(3);
+            v /= 1000;
+
+            geometry_msgs::Point point;
+            point.x = v(0);
+            point.y = v(1);
+            point.z = v(2);
+            marker.points.push_back(point);
+        }
+    }
+
+    marker_array.markers.push_back(marker);
+
+    marker_array_publisher_.publish(marker_array);
+}
+
+void CAD120Reader::renderObjects()
+{
+    const Eigen::Matrix4d& transform = subjects_[subject_].actions[action_].videos[video_].global_transform;
+
+    visualization_msgs::MarkerArray marker_array;
+    visualization_msgs::Marker marker;
+
+    marker.header.frame_id = "/world";
+    marker.header.stamp = ros::Time::now();
+
+    marker.ns = "objects";
+
+    marker.pose.orientation.w = 1.;
+    marker.pose.orientation.x = 0.;
+    marker.pose.orientation.y = 0.;
+    marker.pose.orientation.z = 0.;
+
+    marker.scale.x = 0.01; // line width = 1 cm
+    marker.scale.z = 0.1;  // text height = 10 cm
+
+    marker.color.a = 1.;
+
+    for (int i=0; i<object_bounding_boxes_.size(); i++)
+    {
+        marker.id = i;
+
+        std::vector<double> percentages;
+        percentages.push_back(0.25);
+        percentages.push_back(0.75);
+        const std::vector<int> depths = findDepths( object_bounding_boxes_[i], percentages );
+
+        // if bounding box is empty
+        if (depths.empty())
+        {
+            marker.action = visualization_msgs::Marker::DELETE;
+            marker_array.markers.push_back(marker);
+
+            marker.id += object_bounding_boxes_.size();
+            marker.action = visualization_msgs::Marker::DELETE;
+            marker_array.markers.push_back(marker);
+        }
+
+        // if bounding box is defined
+        else
+        {
+            // cube
+            marker.action = visualization_msgs::Marker::ADD;
+            marker.type = visualization_msgs::Marker::LINE_LIST;
+
+            marker.pose.position.x = 0.;
+            marker.pose.position.y = 0.;
+            marker.pose.position.z = 0.;
+            marker.color.r = 1.;
+            marker.color.g = 0.;
+            marker.color.b = 0.;
+
+            std::vector<Eigen::Vector3d> cube;
+            for (int j=0; j<2; j++)
+            {
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](0), object_bounding_boxes_[i](1), depths[j] ) );
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](2), object_bounding_boxes_[i](1), depths[j] ) );
+
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](2), object_bounding_boxes_[i](1), depths[j] ) );
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](2), object_bounding_boxes_[i](3), depths[j] ) );
+
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](2), object_bounding_boxes_[i](3), depths[j] ) );
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](0), object_bounding_boxes_[i](3), depths[j] ) );
+
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](0), object_bounding_boxes_[i](3), depths[j] ) );
+                cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](0), object_bounding_boxes_[i](1), depths[j] ) );
+            }
+            for (int j=0; j<4; j += 2)
+            {
+                for (int k=1; k<4; k += 2)
+                {
+                    cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](j), object_bounding_boxes_[i](k), depths[0] ) );
+                    cube.push_back( Eigen::Vector3d( object_bounding_boxes_[i](j), object_bounding_boxes_[i](k), depths[1] ) );
+                }
+            }
+
+            for (int j=0; j<cube.size(); j++)
+            {
+                Eigen::Vector4d v;
+                v(1) = cube[j](2);
+                v(0) = (cube[j](0) - X_RES * 0.5) * v(1) * 1.1147 / X_RES;
+                v(2) = (Y_RES * 0.5 - cube[j](1)) * v(1) * 0.8336 / Y_RES;
+                v(3) = 1;
+
+                v = transform * v;
+                v(0) /= v(3);
+                v(1) /= v(3);
+                v(2) /= v(3);
+                v /= 1000;
+
+                geometry_msgs::Point point;
+                point.x = v(0);
+                point.y = v(1);
+                point.z = v(2);
+                marker.points.push_back(point);
+            }
+
+            marker_array.markers.push_back(marker);
+            marker.points.clear();
+
+
+            // text
+            marker.id += object_bounding_boxes_.size();
+            marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+
+            Eigen::Vector3d position = (cube[0] + cube[1] + cube[8] + cube[9]) / 4.0;
+            Eigen::Vector4d v;
+            v(1) = position(2);
+            v(0) = (position(0) - X_RES * 0.5) * v(1) * 1.1147 / X_RES;
+            v(2) = (Y_RES * 0.5 - position(1)) * v(1) * 0.8336 / Y_RES;
+            v(3) = 1;
+
+            v = transform * v;
+            v(0) /= v(3);
+            v(1) /= v(3);
+            v(2) /= v(3);
+            v /= 1000;
+
+            marker.pose.position.x = v(0);
+            marker.pose.position.y = v(1);
+            marker.pose.position.z = v(2) + marker.scale.z / 2.0;
+            marker.color.r = 1.;
+            marker.color.g = 1.;
+            marker.color.b = 1.;
+
+            marker.text = subjects_[subject_].actions[action_].videos[video_].object_types[i];
+
+            marker_array.markers.push_back(marker);
+        }
+    }
+
+    marker_array_publisher_.publish(marker_array);
+}
+
+std::vector<int> CAD120Reader::findDepths(const Eigen::Vector4d& bounding_box, const std::vector<double>& percentages)
+{
+    std::vector<double> depths;
+    for (int i = bounding_box(0); i < bounding_box(2); i++)
+    {
+        for (int j = bounding_box(1); j < bounding_box(3); j++)
+        {
+            if (rgbd_image_[j][i][3] != 0)
+                depths.push_back( rgbd_image_[j][i][3] );  // rgbd_image_[y][x]
+        }
+    }
+
+    std::vector<int> result;
+    if (depths.empty())
+        return result;
+
+    std::sort(depths.begin(), depths.end());
+
+    for (int i=0; i<percentages.size(); i++)
+        result.push_back( depths[ percentages[i] * depths.size() ] );
+
+    return result;
 }
 
 }
