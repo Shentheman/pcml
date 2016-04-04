@@ -14,6 +14,7 @@ int main(int argc, char** argv)
     reader.print();
 
     reader.setPointCloudTopic("CAD120");
+    reader.setMarkerArrayTopic("CAD120_marker");
     ros::Duration(1.0).sleep();
 
     for (int subject=0; subject < reader.numSubjects(); subject++)
@@ -30,6 +31,8 @@ int main(int argc, char** argv)
                 while (reader.readNextFrame())
                 {
                     reader.renderPointCloud();
+                    reader.renderSkeleton();
+                    reader.renderObjects();
                     rate.sleep();
                 }
             }

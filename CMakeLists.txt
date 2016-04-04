@@ -130,6 +130,7 @@ add_library(pcml
 ## Declare a C++ executable
 # add_executable(pcml_node src/pcml_node.cpp)
 add_executable(test_cad120 src/test_cad120.cpp)
+add_executable(kinect_frequency src/kinect_frequency.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -144,6 +145,9 @@ target_link_libraries(pcml
 )
 target_link_libraries(test_cad120
     pcml
+)
+target_link_libraries(kinect_frequency
+    ${catkin_LIBRARIES}
 )
 
 #############

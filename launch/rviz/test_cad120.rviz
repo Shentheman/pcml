@@ -6,7 +6,8 @@ Panels:
       Expanded:
         - /Global Options1
         - /PointCloud21
-        - /PointCloud21/Status1
+        - /MarkerArray1
+        - /MarkerArray1/Namespaces1
       Splitter Ratio: 0.520134
     Tree Height: 576
   - Class: rviz/Selection
@@ -78,12 +79,21 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 2
-      Size (m): 0.01
+      Size (Pixels): 1
+      Size (m): 0.002
       Style: Points
       Topic: CAD120
       Use Fixed Frame: true
       Use rainbow: true
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: CAD120_marker
+      Name: MarkerArray
+      Namespaces:
+        objects: true
+        skeleton: true
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:
@@ -109,22 +119,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.76494
+      Distance: 5.04246
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.00936597
-        Y: 0.840439
-        Z: 0.335319
+        X: 0.00394758
+        Y: 3.71373
+        Z: -0.5616
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.549797
+      Pitch: 0.2598
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.03611
+      Yaw: 4.72095
     Saved: ~
 Window Geometry:
   Displays:
@@ -142,5 +152,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1543
-  X: 170
-  Y: 19
+  X: 162
+  Y: 11
