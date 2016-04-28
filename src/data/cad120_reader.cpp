@@ -71,8 +71,22 @@ CAD120Reader::CAD120Reader(const std::string& directory)
     object_fps_.clear();
 
     setDirectory(directory);
+    setMarkerArrayTopic("cad120");
 }
 
+bool CAD120Reader::getJointPosition(const std::string& joint_name, Eigen::Vector3d& position)
+{
+    for (int i=0; i<num_joints_; i++)
+    {
+        if (joint_name == joint_names_[i])
+        {
+            position = joint_pos_[i];
+            return true;
+        }
+    }
+
+    return false;
+}
 
 void CAD120Reader::setDirectory(const std::string& directory)
 {

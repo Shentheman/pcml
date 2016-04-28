@@ -1,11 +1,15 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(pcml)
 
+# compiler option
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -111,15 +115,17 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
-include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(
+  ${PROJECT_SOURCE_DIR}/include
   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 add_library(pcml
   include/${PROJECT_NAME}/data/cad120_reader.h
+  include/${PROJECT_NAME}/data/skeleton_stream.h
   src/data/cad120_reader.cpp
+  src/data/skeleton_stream.cpp
 )
 
 ## Add cmake target dependencies of the library
@@ -130,6 +136,7 @@ add_library(pcml
 ## Declare a C++ executable
 # add_executable(pcml_node src/pcml_node.cpp)
 add_executable(test_cad120 src/test_cad120.cpp)
+add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 add_executable(kinect_frequency src/kinect_frequency.cpp)
 
 ## Add cmake target dependencies of the executable
@@ -145,6 +152,10 @@ target_link_libraries(pcml
 )
 target_link_libraries(test_cad120
     pcml
+)
+target_link_libraries(test_skeleton_stream
+    pcml
+    ${catkin_LIBRARIES}
 )
 target_link_libraries(kinect_frequency
     ${catkin_LIBRARIES}

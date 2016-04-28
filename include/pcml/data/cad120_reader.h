@@ -61,6 +61,13 @@ private:
 
 public:
 
+    static int numJoints()
+    {
+        return num_joints_;
+    }
+
+public:
+
     CAD120Reader();
     CAD120Reader(const std::string& directory);
 
@@ -70,6 +77,9 @@ public:
     int numSubjects();
     int numActions(int subject);
     int numVideos(int subject, int action);
+
+    // data retrieval
+    bool getJointPosition(const std::string& joint_name, Eigen::Vector3d& position);
 
     // rgbd frames
     void startReadFrames(int subject, int action, int video);
