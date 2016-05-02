@@ -55,8 +55,10 @@ include_directories(
 rosbuild_add_library(pcml
   include/${PROJECT_NAME}/data/cad120_reader.h
   include/${PROJECT_NAME}/data/skeleton_stream.h
+  include/${PROJECT_NAME}/learning/train_future_motion.h
   src/data/cad120_reader.cpp
   src/data/skeleton_stream.cpp
+  src/learning/train_future_motion.cpp
 )
 
 rosbuild_add_executable(test_cad120 src/test_cad120.cpp)
@@ -64,6 +66,9 @@ rosbuild_add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 rosbuild_add_executable(kinect_frequency src/kinect_frequency.cpp)
 rosbuild_add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
 rosbuild_add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
+
+# training is done offline, without ros
+add_executable(train src/train.cpp)
 
 target_link_libraries(test_cad120
     pcml
@@ -77,5 +82,8 @@ target_link_libraries(future_obstacle_publisher
     pcml
 )
 target_link_libraries(future_obstacle_visualizer
+    pcml
+)
+target_link_libraries(train
     pcml
 )
