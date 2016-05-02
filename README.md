@@ -13,28 +13,28 @@ Point Cloud and Machine Learning
  * $ sudo apt-get install ros-indigo-openni-tracker
 
 ## Components
-* msgs
- * FutureObstacleDistribution
- * FutureObstacleDistributions
-* Nodes
- * future_obstacle_publisher
-  * Parameters
+1. msgs
+ 1. FutureObstacleDistribution
+ 2. FutureObstacleDistributions
+2. Nodes
+ 1. future_obstacle_publisher
+  1. Parameters
    * input_stream_type (string, default: realtime)
     * One of "realtime", "cad120"
    * joints_type (string, default: upper_body)
     * One of "whole_body", "upper_body"
    * render (bool, default: false)
    * cad120_directory (string, required when input_stream_type = "cad120")
-  * Subscribed Topics
+  2. Subscribed Topics
    * Topics published by openni_tracker (/head_1, /neck_1, etc.)
-  * Published Topics
+  3. Published Topics
    * future_obstacle_publisher/future_obstacle_distributions (pcml/FutureObstacleDistributions)
- * future_obstacle_visualizer
-  * Subscribed topics
+ 2. future_obstacle_visualizer
+  1. Subscribed topics
    * future_obstacle_publisher/future_obstacle_distributions (pcml/FutureObstacleDistributions)
-  * Published Topics
+  2. Published Topics
    * /future_obstacle_distributions_marker_array (visualization_msgs/MarkerArray)
-* Launches
+3. Launches
  * future_obstacle_publisher.launch
 
 ## Build
