@@ -4,7 +4,7 @@
 
 #include <pcml/data/cad120_reader.h>
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include <ros/ros.h>
 #include <tf/transform_listener.h>

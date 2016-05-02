@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 #include <ros/ros.h>
 
