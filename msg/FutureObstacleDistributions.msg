@@ -1,2 +1,2 @@
 Header header
-pcml/FutureObstacleDistribution obstacles
+pcml/FutureObstacleDistribution[] obstacles
