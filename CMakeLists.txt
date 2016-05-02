@@ -35,7 +35,7 @@ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 #uncomment if you have defined messages
-#rosbuild_genmsg()
+rosbuild_genmsg()
 #uncomment if you have defined services
 #rosbuild_gensrv()
 
@@ -62,6 +62,7 @@ rosbuild_add_library(pcml
 rosbuild_add_executable(test_cad120 src/test_cad120.cpp)
 rosbuild_add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 rosbuild_add_executable(kinect_frequency src/kinect_frequency.cpp)
+rosbuild_add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
 
 target_link_libraries(test_cad120
     pcml
@@ -70,4 +71,7 @@ target_link_libraries(test_skeleton_stream
     pcml
 )
 target_link_libraries(kinect_frequency
+)
+target_link_libraries(future_obstacle_publisher
+    pcml
 )
