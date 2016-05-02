@@ -4,6 +4,18 @@ project(pcml)
 # compiler option
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
+## show all files (http://wiki.ros.org/IDEs#QtCreator)
+#Add all files in subdirectories of the project in
+# a dummy_target so qtcreator have access to all files
+FILE(GLOB children ${CMAKE_SOURCE_DIR}/*)
+FOREACH(child ${children})
+  IF(IS_DIRECTORY ${child})
+    file(GLOB_RECURSE dir_files "${child}/*")
+    LIST(APPEND extra_files ${dir_files})
+  ENDIF()
+ENDFOREACH()
+add_custom_target(dummy_${PROJECT_NAME} SOURCES ${extra_files})
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -51,6 +63,10 @@ find_package(catkin REQUIRED COMPONENTS
 #   Message1.msg
 #   Message2.msg
 # )
+add_message_files(
+    FILES
+    FutureObstacleDistributions.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -71,6 +87,10 @@ find_package(catkin REQUIRED COMPONENTS
 #   DEPENDENCIES
 #   std_msgs  # Or other packages containing msgs
 # )
+generate_messages(
+  DEPENDENCIES
+  std_msgs  # Or other packages containing msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
