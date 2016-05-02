@@ -56,7 +56,7 @@ private:
 };
 
 
-class SkeletonFileStream : public SkeletonStream
+class SkeletonFileStreamAbstract : public SkeletonStream
 {
 public:
 
@@ -64,8 +64,8 @@ public:
      *  Get skeleton from input file.
      *  Can be real-time or frame-by-frame.
      */
-    SkeletonFileStream();
-    SkeletonFileStream(const std::vector<std::string>& joint_names);
+    SkeletonFileStreamAbstract();
+    SkeletonFileStreamAbstract(const std::vector<std::string>& joint_names);
 
     virtual bool getSkeleton(Eigen::Matrix3Xd& skeleton);
 
@@ -75,7 +75,41 @@ private:
 };
 
 
-class SkeletonCAD120Stream : public SkeletonFileStream
+class SkeletonFileStream : public SkeletonFileStreamAbstract
+{
+public:
+
+    /**
+     *  Get skeleton from input file.
+     *
+     *  File format
+     *   num_joints
+     *   joint_names[0] ... joint_names[num_joints-1]
+     *   joint_position[0][0] ... joint_position[0][num_joints-1] (where position is 'x y z')
+     *   ...
+     *   joint_position[?][0] ... joint_position[?][num_joints-1] (until EOF)
+     */
+    SkeletonFileStream(const std::string& filename);
+    SkeletonFileStream(const std::string& filename, const std::vector<std::string>& joint_names);
+    ~SkeletonFileStream();
+
+    virtual bool getSkeleton(Eigen::Matrix3Xd& skeleton);
+
+    void startReadFrames();
+
+private:
+
+    std::string filename_;
+
+    // file is opened when start requested
+    FILE* fp_;
+    int file_num_joints_;
+    std::vector<std::string> file_joint_names_;
+    std::vector<int> file_joint_index_map_;     // joint index in file -> joint index in requested joint names
+};
+
+
+class SkeletonCAD120Stream : public SkeletonFileStreamAbstract
 {
 private:
 

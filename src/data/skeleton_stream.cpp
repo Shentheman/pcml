@@ -149,20 +149,105 @@ void SkeletonStream::renderSkeleton(const Eigen::Matrix3Xd& skeleton)
 
 
 // SkeletonFileStream
-SkeletonFileStream::SkeletonFileStream()
-    : SkeletonFileStream(jointNamesWholeBody())
+SkeletonFileStreamAbstract::SkeletonFileStreamAbstract()
+    : SkeletonFileStreamAbstract(jointNamesWholeBody())
 {
 }
 
-SkeletonFileStream::SkeletonFileStream(const std::vector<std::string> &joint_names)
+SkeletonFileStreamAbstract::SkeletonFileStreamAbstract(const std::vector<std::string> &joint_names)
     : SkeletonStream(joint_names)
     , is_realtime_(true)
 {
 }
 
-bool SkeletonFileStream::getSkeleton(Eigen::Matrix3Xd& skeleton)
+bool SkeletonFileStreamAbstract::getSkeleton(Eigen::Matrix3Xd& skeleton)
 {
     return false;
+}
+
+
+// SkeletonFileStream
+SkeletonFileStream::SkeletonFileStream(const std::string& filename)
+    : SkeletonFileStream(filename, jointNamesWholeBody())
+{
+}
+
+SkeletonFileStream::SkeletonFileStream(const std::string& filename, const std::vector<std::string> &joint_names)
+    : SkeletonFileStreamAbstract(joint_names)
+{
+    filename_ = filename;
+    fp_ = NULL;
+}
+
+SkeletonFileStream::~SkeletonFileStream()
+{
+    if (fp_ != NULL)
+        fclose(fp_);
+}
+
+void SkeletonFileStream::startReadFrames()
+{
+    fp_ = fopen(filename_.c_str(), "r");
+    if (fp_ == NULL)
+        return;
+
+    fscanf(fp_, "%d", &file_num_joints_);
+    file_joint_index_map_.resize(file_num_joints_);
+
+    std::vector<char> requested_joint_name_exist(joint_names_.size(), false);
+
+    for (int i=0; i<file_num_joints_; i++)
+    {
+        static char joint_name[128];
+        fscanf(fp_, "%lf", joint_name);
+
+        file_joint_names_.push_back(joint_name);
+
+        const int idx = std::find(joint_names_.begin(), joint_names_.end(), joint_name) - joint_names_.begin();
+        if (idx != joint_names_.size())
+        {
+            // requested joint is found in the saved file
+            file_joint_index_map_[i] = idx;
+            requested_joint_name_exist[idx] = true;
+        }
+        else
+            file_joint_index_map_[i] = -1;
+    }
+
+    // all requested joint names should exist in the file
+    for (int i=0; i<joint_names_.size(); i++)
+    {
+        if (!requested_joint_name_exist[i])
+        {
+            fclose(fp_);
+            fp_ = NULL;
+            return;
+        }
+    }
+}
+
+bool SkeletonFileStream::getSkeleton(Eigen::Matrix3Xd& skeleton)
+{
+    if (fp_ == NULL)
+        return false;
+
+    skeleton.resize(Eigen::NoChange, joint_names_.size());
+
+    for (int i=0; i<file_num_joints_; i++)
+    {
+        Eigen::Vector3d v;
+        if (fscanf(fp_, "%lf%lf%lf", &v(0), &v(1), &v(2)) != 3)
+        {
+            fclose(fp_);
+            fp_ = NULL;
+            return false;
+        }
+
+        if (file_joint_index_map_[i] != -1)
+            skeleton.col( file_joint_index_map_[i] ) = v;
+    }
+
+    return true;
 }
 
 
@@ -192,7 +277,7 @@ SkeletonCAD120Stream::SkeletonCAD120Stream(const std::string& directory)
 }
 
 SkeletonCAD120Stream::SkeletonCAD120Stream(const std::string &directory, const std::vector<std::string> &joint_names)
-    : SkeletonFileStream(joint_names)
+    : SkeletonFileStreamAbstract(joint_names)
     , reader_(directory)
 {
 }
