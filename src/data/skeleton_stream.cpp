@@ -79,6 +79,11 @@ void SkeletonStream::renderSkeleton()
     if (!getSkeleton(skeleton))
         return;
 
+    renderSkeleton(skeleton);
+}
+
+void SkeletonStream::renderSkeleton(const Eigen::Matrix3Xd& skeleton)
+{
     visualization_msgs::MarkerArray marker_array;
     visualization_msgs::Marker marker;
 

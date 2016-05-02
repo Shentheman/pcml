@@ -63,6 +63,7 @@ rosbuild_add_executable(test_cad120 src/test_cad120.cpp)
 rosbuild_add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 rosbuild_add_executable(kinect_frequency src/kinect_frequency.cpp)
 rosbuild_add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
+rosbuild_add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
 
 target_link_libraries(test_cad120
     pcml
@@ -73,5 +74,8 @@ target_link_libraries(test_skeleton_stream
 target_link_libraries(kinect_frequency
 )
 target_link_libraries(future_obstacle_publisher
+    pcml
+)
+target_link_libraries(future_obstacle_visualizer
     pcml
 )

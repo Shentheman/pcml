@@ -29,7 +29,11 @@ public:
 
     virtual bool getSkeleton(Eigen::Matrix3Xd& skeleton);
 
+    /// get the skeleton at the crurent time and then render skeleton
     void renderSkeleton();
+
+    /// render skeleton
+    void renderSkeleton(const Eigen::Matrix3Xd& skeleton);
 
     inline bool isFinished()
     {
@@ -121,7 +125,7 @@ private:
 
     inline virtual std::string getFrameId()
     {
-        return nh_.getNamespace() + "camera_depth_frame";
+        return "/camera_depth_frame";
     }
 
     int getUserId();
