@@ -1,17 +1,15 @@
 #include <pcml/learning/train_future_motion.h>
+#include <pcml/data/skeleton_stream.h>
 
-#include <stdio.h>
+#include <ros/ros.h>
 
 int main(int argc, char** argv)
 {
-    if (argc < 2)
-    {
-        fprintf(stderr, "Usage: train [data path]");
-        fflush(stderr);
-        return 1;
-    }
-
     pcml::TrainFutureMotion trainer;
+    trainer.setJointNames(pcml::SkeletonStream::jointNamesUpperBody());
+    trainer.setNumActionTypes(10);
+    trainer.setT(15);
+    trainer.setD(15);
 
     return 0;
 }
