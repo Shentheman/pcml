@@ -20,6 +20,9 @@ Point Cloud and Machine Learning
    $ cmake -DBUILD_SHARED_LIBS=ON ..  
    $ make  
    $ sudo make install
+* CAD120 dataset
+ * Fix inconsistency:  
+   1. Subject1_annotations/having_meal/0510182019_obj1.txt, delete the last line starting '500,'.
 
 ## Components
 * msgs
@@ -62,5 +65,6 @@ $ roslaunch pcml future_obstacle_publisher
 * Run 'train' executable with '-d MODEL_DIRECTORY_PATH' option (required)
  * Example:  
    $ ./train -d /playpen/jaesungp/indigo_workspace/pcml/model1
- * Modify training parameters in the file 'config.yaml' in the MODEL_DIRECTORY_PATH
- * Training result is saved in the MODEL_DIRECTORY_PATH
+ * Modify training parameters in the file 'config.yaml' in the MODEL_DIRECTORY_PATH. Training result is saved in the MODEL_DIRECTORY_PATH.
+ * To disable log print by svm_train, modify 'lib/libsvm/svm.cpp' where static void info(...) function can be chosen.
+

@@ -46,6 +46,7 @@ svm_node* newSvmInput(const Eigen::VectorXd& f)
             idx++;
         }
     }
+    x[idx].index = -1;
 
     return x;
 }
@@ -238,7 +239,7 @@ void TrainFutureMotion::loadTrainedModel(std::string directory)
     internal::removeTrailingSlash(directory);
 
     // load current action label svm classificatio model
-    YAML::Node models = YAML::LoadFile( directory + "models.yaml" );
+    YAML::Node models = YAML::LoadFile( directory + "/models.yaml" );
 
     current_action_classifier_ = svm_load_model( models["current action model"].as<std::string>().c_str() );
 }
@@ -248,7 +249,7 @@ void TrainFutureMotion::saveTrainedModel(std::string directory)
     internal::removeTrailingSlash(directory);
 
     // save current action label svm classificatio model
-    std::string current_action_classifier_filename = directory + "current_action_model.svm";
+    std::string current_action_classifier_filename = directory + "/current_action_model.svm";
     svm_save_model( current_action_classifier_filename.c_str(), current_action_classifier_ );
 
     // save file list in yaml format

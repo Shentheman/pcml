@@ -81,7 +81,7 @@ rosbuild_add_executable(future_obstacle_publisher src/future_obstacle_publisher.
 rosbuild_add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
 
 # training is done offline, without ros
-add_executable(train src/train.cpp)
+add_executable(train_cad120 src/train_cad120.cpp)
 
 target_link_libraries(test_cad120
     pcml
@@ -97,6 +97,6 @@ target_link_libraries(future_obstacle_publisher
 target_link_libraries(future_obstacle_visualizer
     pcml
 )
-target_link_libraries(train
+target_link_libraries(train_cad120
     pcml
 )

@@ -25,6 +25,7 @@ private:
     static const int num_skeletons_ = 14;
     static const char* joint_names_[num_joints_];
     static const int skeletons_[num_skeletons_][2];
+    static const std::map<std::string, int> sub_activity_to_index_map_;
 
     struct FrameIntervalAnnotation
     {
@@ -80,6 +81,8 @@ public:
 
     // data retrieval
     bool getJointPosition(const std::string& joint_name, Eigen::Vector3d& position);
+    std::string getSubActivity();
+    int getSubActivityIndex();
 
     // rgbd frames
     void startReadFrames(int subject, int action, int video);
@@ -100,10 +103,13 @@ private:
 
     void readActionInfo(Action& action, const std::string& action_directory);
 
+    void readLabeling();
+
     // find depths of certain percentages inside the bounding box in the depth image
     std::vector<int> findDepths(const Eigen::Vector4d& bounding_box, const std::vector<double>& percentages);
 
     // ros publishers
+    bool marker_array_publisher_initialized_;
     ros::Publisher point_cloud_publisher_;
     ros::Publisher marker_array_publisher_;
 
@@ -119,6 +125,7 @@ private:
     int subject_;
     int action_;
     int video_;
+    int current_frame_;
 
     // per-frame skeleton data
     // It retains the original data.

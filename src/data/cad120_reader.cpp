@@ -51,6 +51,20 @@ const int CAD120Reader::skeletons_[num_skeletons_][2] =
     10, 14,
 };
 
+const std::map<std::string, int> CAD120Reader::sub_activity_to_index_map_ =
+{
+    {"reaching", 0},
+    {"moving"  , 1},
+    {"pouring" , 2},
+    {"eating"  , 3},
+    {"drinking", 4},
+    {"opening" , 5},
+    {"placing" , 6},
+    {"closing" , 7},
+    {"cleaning", 8},
+    {"null"    , 9},
+};
+
 
 bool CAD120Reader::existDirectory(const std::string& directory)
 {
@@ -65,13 +79,13 @@ CAD120Reader::CAD120Reader()
 }
 
 CAD120Reader::CAD120Reader(const std::string& directory)
+    : marker_array_publisher_initialized_(false)
 {
     rgbd_fp_ = NULL;
     joint_fp_ = NULL;
     object_fps_.clear();
 
     setDirectory(directory);
-    setMarkerArrayTopic("cad120");
 }
 
 bool CAD120Reader::getJointPosition(const std::string& joint_name, Eigen::Vector3d& position)
@@ -86,6 +100,30 @@ bool CAD120Reader::getJointPosition(const std::string& joint_name, Eigen::Vector
     }
 
     return false;
+}
+
+std::string CAD120Reader::getSubActivity()
+{
+    // current implementation is inefficient
+    const std::vector<FrameIntervalAnnotation>& labelings = subjects_[subject_].actions[action_].videos[video_].annotations;
+
+    for (int i=0; i<labelings.size(); i++)
+    {
+        if (labelings[i].start_frame <= current_frame_ && current_frame_ <= labelings[i].end_frame)
+            return labelings[i].sub_activity_id;
+    }
+
+    // if not found in labeling file, then return the last sub-activity
+    return labelings.rbegin()->sub_activity_id;
+}
+
+int CAD120Reader::getSubActivityIndex()
+{
+    std::map<std::string, int>::const_iterator it = sub_activity_to_index_map_.find(getSubActivity());
+    if (it == sub_activity_to_index_map_.end())
+        return -1;
+
+    return it->second;
 }
 
 void CAD120Reader::setDirectory(const std::string& directory)
@@ -237,6 +275,7 @@ void CAD120Reader::startReadFrames(int subject, int action, int video)
     subject_ = subject;
     action_ = action;
     video_ = video;
+    current_frame_ = 0;
 
     const Video& v = subjects_[subject].actions[action].videos[video];
     char filename[NAME_MAX + 1];
@@ -261,37 +300,100 @@ void CAD120Reader::startReadFrames(int subject, int action, int video)
                 directory_.c_str(), subjects_[subject].subject_id, subjects_[subject].actions[action].action_id.c_str(), v.id.c_str(), v.object_ids[i]);
         object_fps_[i] = fopen(filename, "r");
     }
+
+    // labeling of temporal segments
+    readLabeling();
+}
+
+void CAD120Reader::readLabeling()
+{
+    Video& v = subjects_[subject_].actions[action_].videos[video_];
+    char filename[NAME_MAX + 1];
+    static const int buffer_size = 256;
+    static char buffer[buffer_size];
+
+    sprintf(filename, "%s/Subject%d_annotations/%s/labeling.txt",
+            directory_.c_str(), subjects_[subject_].subject_id, subjects_[subject_].actions[action_].action_id.c_str());
+
+    FILE* labeling_fp = fopen(filename, "r");
+
+    while (true)
+    {
+        if (fgets(buffer, buffer_size, labeling_fp) == NULL || strcmp(buffer, "\n") == 0)
+            break;
+
+        // line format: video_id, start_frame, end_frame, sub_activity, affordance(1), affordance(2), ...
+        char* p = strtok(buffer, ",\n");
+        if (v.id == p)
+        {
+            FrameIntervalAnnotation labeling;
+
+            p = strtok(NULL, ",\n");
+            labeling.start_frame = atoi(p);
+
+            p = strtok(NULL, ",\n");
+            labeling.end_frame = atoi(p);
+
+            p = strtok(NULL, ",\n");
+            labeling.sub_activity_id = p;
+
+            while (true)
+            {
+                p = strtok(NULL, ",\n");
+                if (p == NULL) break;
+
+                labeling.affordance_ids.push_back(p);
+            }
+
+            v.annotations.push_back(labeling);
+        }
+    }
+
+    fclose(labeling_fp);
 }
 
 bool CAD120Reader::readNextFrame()
 {
+    current_frame_++;
+
+    bool is_opened = false; // whether any file is opened
+
     // RGBD data
     // 6(number+comma) * 4(channels) * 640(X_RES) * 480(Y_RES) = 7372800 Bytes = 7 MB
     static const int buffer_size = 6 * 4 * X_RES * Y_RES;
     static char buffer[buffer_size];
 
-    if (fgets(buffer, buffer_size, rgbd_fp_) == NULL || strcmp(buffer, "\n") == 0)
-        return false;
-
-    int* ptr = (int*)rgbd_image_;
-
-    // first integer is the frame number
-    char* p = strtok(buffer, ",\n");
-    while (true)
+    if (rgbd_fp_ != NULL)
     {
-        p = strtok(NULL, ",\n");
-        if (p == NULL) break;
+        is_opened = true;
 
-        *ptr = atoi(p);
-        ptr++;
+        if (fgets(buffer, buffer_size, rgbd_fp_) == NULL || strcmp(buffer, "\n") == 0)
+            return false;
+
+        int* ptr = (int*)rgbd_image_;
+
+        // first integer is the frame number
+        char* p = strtok(buffer, ",\n");
+        while (true)
+        {
+            p = strtok(NULL, ",\n");
+            if (p == NULL) break;
+
+            *ptr = atoi(p);
+            ptr++;
+        }
     }
 
-
     // joint data
-    if (fgets(buffer, buffer_size, joint_fp_) != NULL)
+    if (joint_fp_ != NULL)
     {
+        is_opened = true;
+
+        if (fgets(buffer, buffer_size, joint_fp_) == NULL || strcmp(buffer, "\n") == 0)
+            return false;
+
         // first integer is the frame number
-        p = strtok(buffer, ",\n");
+        char* p = strtok(buffer, ",\n");
         if (strcmp(p, "END") != 0)
         {
             for (int i=0; i<num_joints_; i++)
@@ -326,10 +428,15 @@ bool CAD120Reader::readNextFrame()
     const Video& v = subjects_[subject_].actions[action_].videos[video_];
     for (int i=0; i<v.object_ids.size(); i++)
     {
-        if (fgets(buffer, buffer_size, object_fps_[i]) != NULL)
+        if (object_fps_[i] != NULL)
         {
+            is_opened = true;
+
+            if (fgets(buffer, buffer_size, object_fps_[i]) == NULL || strcmp(buffer, "\n") == 0)
+                return false;
+
             // first two integer is the frame number and the object id
-            p = strtok(buffer, ",\n");
+            char* p = strtok(buffer, ",\n");
             p = strtok(NULL, ",\n");
 
             // bounding box
@@ -351,7 +458,7 @@ bool CAD120Reader::readNextFrame()
         }
     }
 
-    return true;
+    return is_opened;
 }
 
 void CAD120Reader::finishReadFrames()
@@ -377,18 +484,21 @@ void CAD120Reader::finishReadFrames()
 
 
     // rviz object marker cleanup
-    visualization_msgs::MarkerArray marker_array;
-    visualization_msgs::Marker marker;
-    marker.header.frame_id = "/world";
-    marker.header.stamp = ros::Time::now();
-    marker.ns = "objects";
-    marker.action = visualization_msgs::Marker::DELETE;
-    for (int i=0; i<object_bounding_boxes_.size() * 2; i++) // 0 ~ (n-1) for line list, n ~ (2n-1) for text
+    if (marker_array_publisher_initialized_)
     {
-        marker.id = i;
-        marker_array.markers.push_back(marker);
+        visualization_msgs::MarkerArray marker_array;
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = "/world";
+        marker.header.stamp = ros::Time::now();
+        marker.ns = "objects";
+        marker.action = visualization_msgs::Marker::DELETE;
+        for (int i=0; i<object_bounding_boxes_.size() * 2; i++) // 0 ~ (n-1) for line list, n ~ (2n-1) for text
+        {
+            marker.id = i;
+            marker_array.markers.push_back(marker);
+        }
+        marker_array_publisher_.publish(marker_array);
     }
-    marker_array_publisher_.publish(marker_array);
 }
 
 void CAD120Reader::setPointCloudTopic(const std::string& topic)
@@ -401,6 +511,7 @@ void CAD120Reader::setMarkerArrayTopic(const std::string& topic)
 {
     ros::NodeHandle n;
     marker_array_publisher_ = n.advertise<visualization_msgs::MarkerArray>(topic, 100);
+    marker_array_publisher_initialized_ = true;
 }
 
 void CAD120Reader::renderPointCloud()

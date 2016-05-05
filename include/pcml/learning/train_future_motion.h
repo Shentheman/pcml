@@ -61,6 +61,11 @@ public:
         num_spgp_pseudo_inputs_ = num_spgp_pseudo_inputs;
     }
 
+    const std::vector<std::string>& jointNames()
+    {
+        return joint_names_;
+    }
+
     /**
      * @brief addMotion Add a training motion.
      * @param motion Motion data of 15 fps as (joint motions as (num_joints * 3) X (num_frames) matrix
@@ -117,6 +122,7 @@ public:
      */
     Eigen::MatrixXd predictedMotion(int action_label);
 
+    // load/save
     void loadConfig(std::string directory);
     void saveConfig(std::string directory);
     void loadTrainedModel(std::string directory);
