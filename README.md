@@ -2,6 +2,7 @@
 Point Cloud and Machine Learning
 
 ## Requirements
+* Ubuntu 14.04
 * ROS indigo
 * ROS Eigen
 * Moveit!
@@ -11,8 +12,14 @@ Point Cloud and Machine Learning
  * $ sudo apt-get install ros-indigo-openni-launch
 * openni_tracker
  * $ sudo apt-get install ros-indigo-openni-tracker
-* libsvm
+* libsvm (https://www.csie.ntu.edu.tw/~cjlin/libsvm/)
  * put 'svm.h', 'svm.cpp' into lib/libsvm
+* yaml-cpp (https://github.com/jbeder/yaml-cpp)
+ * $ mkdir build  
+   $ cd build  
+   $ cmake -DBUILD_SHARED_LIBS=ON ..  
+   $ make  
+   $ sudo make install
 
 ## Components
 * msgs
@@ -50,3 +57,10 @@ $ rosrun rviz rviz
 $ roslaunch pcml future_obstacle_publisher  
  * Make the openni_tracker track somebody
  * Modify .launch file parameters
+
+## Train model (not complete yet)
+* Run 'train' executable with '-d MODEL_DIRECTORY_PATH' option (required)
+ * Example:  
+   $ ./train -d /playpen/jaesungp/indigo_workspace/pcml/model1
+ * Modify training parameters in the file 'config.yaml' in the MODEL_DIRECTORY_PATH
+ * Training result is saved in the MODEL_DIRECTORY_PATH

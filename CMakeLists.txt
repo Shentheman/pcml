@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 # compiler option
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -fPIC")
 
 ## show all files (http://wiki.ros.org/IDEs#QtCreator)
 #Add all files in subdirectories of the project in
@@ -18,6 +18,9 @@ add_custom_target(dummy_${PROJECT_NAME} SOURCES ${extra_files})
 
 # eigen
 find_package(Eigen3 REQUIRED)
+
+# yaml-cpp
+find_package(yaml-cpp REQUIRED)
 
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
@@ -48,22 +51,27 @@ rosbuild_genmsg()
 #target_link_libraries(example ${PROJECT_NAME})
 
 include_directories(
-  ${PROJECT_SOURCE_DIR}/lib
-  ${PROJECT_SOURCE_DIR}/include
-  ${Eigen_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/lib
+    ${PROJECT_SOURCE_DIR}/include
+    ${Eigen_INCLUDE_DIRS}
+    ${YAML_CPP_INCLUDE_DIR}
 )
 
 rosbuild_add_library(pcml
-  include/${PROJECT_NAME}/data/cad120_reader.h
-  include/${PROJECT_NAME}/data/skeleton_stream.h
-  include/${PROJECT_NAME}/learning/train_future_motion.h
-  src/data/cad120_reader.cpp
-  src/data/skeleton_stream.cpp
-  src/learning/train_future_motion.cpp
+    include/${PROJECT_NAME}/data/cad120_reader.h
+    include/${PROJECT_NAME}/data/skeleton_stream.h
+    include/${PROJECT_NAME}/learning/train_future_motion.h
+    src/data/cad120_reader.cpp
+    src/data/skeleton_stream.cpp
+    src/learning/train_future_motion.cpp
 
-  # libsvm
-  lib/libsvm/svm.h
-  lib/libsvm/svm.cpp
+    # libsvm
+    lib/libsvm/svm.h
+    lib/libsvm/svm.cpp
+)
+
+target_link_libraries(pcml
+    ${YAML_CPP_LIBRARIES}
 )
 
 rosbuild_add_executable(test_cad120 src/test_cad120.cpp)

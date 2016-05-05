@@ -1,0 +1,19 @@
+joint names:
+  - head
+  - neck
+  - torso
+  - left_shoulder
+  - left_elbow
+  - left_hand
+  - right_shoulder
+  - right_elbow
+  - right_hand
+num action types: 10
+T:
+  value: 15
+  stride: 1
+D:
+  value: 15
+  stride: 1
+RBF gamma: 1
+num SPGP pseudo inputs: 20

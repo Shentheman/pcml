@@ -56,6 +56,11 @@ public:
         rbf_gamma_ = gamma;
     }
 
+    inline void setNumSPGPPseudoInputs(int num_spgp_pseudo_inputs)
+    {
+        num_spgp_pseudo_inputs_ = num_spgp_pseudo_inputs;
+    }
+
     /**
      * @brief addMotion Add a training motion.
      * @param motion Motion data of 15 fps as (joint motions as (num_joints * 3) X (num_frames) matrix
@@ -112,6 +117,11 @@ public:
      */
     Eigen::MatrixXd predictedMotion(int action_label);
 
+    void loadConfig(std::string directory);
+    void saveConfig(std::string directory);
+    void loadTrainedModel(std::string directory);
+    void saveTrainedModel(std::string directory);
+
 private:
 
     /// extract feature from input motion.
@@ -131,6 +141,7 @@ private:
     int D_; // # of future frames to be predicted
     int D_stride_;
     double rbf_gamma_; // RBF(u, v) = exp(-gamma * |u-v|^2)
+    int num_spgp_pseudo_inputs_; // # of pseudo inputs for Sparse Pseudo-input Gaussian Processes (SPGP)
 
     // training input
     std::vector<Eigen::MatrixXd> motions_;

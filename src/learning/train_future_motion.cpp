@@ -1,10 +1,12 @@
 #include <pcml/learning/train_future_motion.h>
-
 #include <pcml/data/skeleton_stream.h>
 
 #include <cassert>
-
 #include <algorithm>
+#include <fstream>
+
+// yaml-cpp
+#include <yaml-cpp/yaml.h>
 
 
 namespace pcml
@@ -60,6 +62,13 @@ void deleteSvmProblem(svm_problem* prob)
     delete prob->x;
     delete prob->y;
     delete prob;
+}
+
+void removeTrailingSlash(std::string& str)
+{
+    // remove trailing '/'
+    if (*str.rbegin() == '/')
+        str = str.substr(0, str.size() - 1);
 }
 
 } // namespace internal
@@ -186,6 +195,69 @@ Eigen::MatrixXd TrainFutureMotion::predictedFutureActionProbabilities(int action
 Eigen::MatrixXd TrainFutureMotion::predictedMotion(int action_label)
 {
     return predicted_motions_[action_label];
+}
+
+void TrainFutureMotion::loadConfig(std::string directory)
+{
+    internal::removeTrailingSlash(directory);
+
+    // load config in yaml format
+    YAML::Node config = YAML::LoadFile( directory + "/config.yaml" );
+
+    joint_names_ = config["joint names"].as<std::vector<std::string> >();
+    num_action_types_ = config["num action types"].as<int>();
+    T_ = config["T"]["value"].as<int>();
+    T_stride_ = config["T"]["stride"].as<int>();
+    D_ = config["D"]["value"].as<int>();
+    D_stride_ = config["D"]["stride"].as<int>();
+    rbf_gamma_ = config["RBF gamma"].as<double>();
+    num_spgp_pseudo_inputs_ = config["num SPGP pseudo inputs"].as<int>();
+}
+
+void TrainFutureMotion::saveConfig(std::string directory)
+{
+    internal::removeTrailingSlash(directory);
+
+    // save config in yaml format
+    YAML::Node config;
+    config["joint names"] = joint_names_;
+    config["num action types"] = num_action_types_;
+    config["T"]["value"] = T_;
+    config["T"]["stride"] = T_stride_;
+    config["D"]["value"] = D_;
+    config["D"]["stride"] = D_stride_;
+    config["RBF gamma"] = rbf_gamma_;
+    config["num SPGP pseudo inputs"] = num_spgp_pseudo_inputs_;
+
+    std::ofstream out(directory + "/config.yaml");
+    out << config;
+}
+
+void TrainFutureMotion::loadTrainedModel(std::string directory)
+{
+    internal::removeTrailingSlash(directory);
+
+    // load current action label svm classificatio model
+    YAML::Node models = YAML::LoadFile( directory + "models.yaml" );
+
+    current_action_classifier_ = svm_load_model( models["current action model"].as<std::string>().c_str() );
+}
+
+void TrainFutureMotion::saveTrainedModel(std::string directory)
+{
+    internal::removeTrailingSlash(directory);
+
+    // save current action label svm classificatio model
+    std::string current_action_classifier_filename = directory + "current_action_model.svm";
+    svm_save_model( current_action_classifier_filename.c_str(), current_action_classifier_ );
+
+    // save file list in yaml format
+    YAML::Node models;
+
+    models["current action model"] = current_action_classifier_filename;
+
+    std::ofstream out(directory + "/models.yaml");
+    out << models;
 }
 
 Eigen::VectorXd TrainFutureMotion::extractFeature(const Eigen::MatrixXd &motion)
