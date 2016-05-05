@@ -2,7 +2,7 @@
 #define PCML_JOINT_MOTION_FEATURE_H
 
 
-#include <Eigen/Dense>
+#include <eigen3/Eigen/Dense>
 
 
 namespace pcml

@@ -6,6 +6,9 @@
 #include <string>
 #include <algorithm>
 
+// libsvm
+#include <svm.h>
+
 #include <eigen3/Eigen/Dense>
 
 
@@ -48,6 +51,11 @@ public:
         D_stride_ = D_stride;
     }
 
+    inline void setRBFGamma(double gamma)
+    {
+        rbf_gamma_ = gamma;
+    }
+
     /**
      * @brief addMotion Add a training motion.
      * @param motion Motion data of 15 fps as (joint motions as (num_joints * 3) X (num_frames) matrix
@@ -56,7 +64,8 @@ public:
     void addMotion(const Eigen::MatrixXd& motion, const Eigen::VectorXi action_label);
 
     /**
-     * 60000 *
+     * 3 kinds of training
+     *
      * @brief train Train using all added training motions and store the trained parameters (for Gaussian Process and SVM classifiers)
      */
     void train();
@@ -72,12 +81,20 @@ public:
     void predict(const Eigen::MatrixXd& motion);
 
     /**
-     * @brief predictedActionProbabilities Returns the (softmax) probability distribution of future action labels.
-     *                                     result(i,j) = (probability of action label i after (j+1) frames)
-     *                                     Must be called after predict() function.
+     * @brief predictedCurrentActionProbabilities Returns the (softmax) probability distribution of current action labels.
+     *                                            result(i) = (probability of action label i)
+     *                                            Must be called after predict() function.
+     * @return Action label probability distributions at current time.
+     */
+    Eigen::VectorXd predictedCurrentActionProbabilities();
+
+    /**
+     * @brief predictedFutureActionProbabilities Returns the (softmax) probability distribution of future action labels, given current action label guess,
+     *                                           result(i,j) = (probability of action label i after (j+1) frames, given current action label guess)
+     *                                           Must be called after predict() function.
      * @return Action label probability distributions over future D frames.
      */
-    Eigen::MatrixXd predictedActionProbabilities();
+    Eigen::MatrixXd predictedFutureActionProbabilities(int action_label);
 
     /**
      * @brief predictedMotion Returns predicted motion of D frames given the motion and the requested action label.
@@ -98,7 +115,7 @@ private:
     /// Input before striding.
     Eigen::MatrixXd convertFutureMotion(const Eigen::VectorXd& current_motion, const Eigen::MatrixXd &future_motion);
 
-    // input parameters
+    // training parameters
     std::vector<std::string> joint_names_;
     int root_joint_index_; // the index of root joint (which is 'torso' in OpenNI tracker)
     int num_action_types_;
@@ -106,11 +123,17 @@ private:
     int T_stride_;
     int D_; // # of future frames to be predicted
     int D_stride_;
+    double rbf_gamma_; // RBF(u, v) = exp(-gamma * |u-v|^2)
 
+    // training input
     std::vector<Eigen::MatrixXd> motions_;
     std::vector<Eigen::VectorXi> action_labels_;
 
-    Eigen::MatrixXd predicted_action_probabilities_;
+    // training model
+    svm_model* current_action_classifier_;
+
+    Eigen::VectorXd predicted_current_action_probabilities_;
+    std::vector<Eigen::MatrixXd> predicted_future_action_probabilities_;
     std::vector<Eigen::MatrixXd> predicted_motions_;
 };
 

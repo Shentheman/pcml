@@ -48,6 +48,7 @@ rosbuild_genmsg()
 #target_link_libraries(example ${PROJECT_NAME})
 
 include_directories(
+  ${PROJECT_SOURCE_DIR}/lib
   ${PROJECT_SOURCE_DIR}/include
   ${Eigen_INCLUDE_DIRS}
 )
@@ -59,6 +60,10 @@ rosbuild_add_library(pcml
   src/data/cad120_reader.cpp
   src/data/skeleton_stream.cpp
   src/learning/train_future_motion.cpp
+
+  # libsvm
+  lib/svm.h
+  lib/svm.cpp
 )
 
 rosbuild_add_executable(test_cad120 src/test_cad120.cpp)
