@@ -165,7 +165,7 @@ void TrainFutureMotion::predict(const Eigen::MatrixXd& motion)
     svm_node* x = newSvmInput(f);
 
     // predict current action label
-    svm_predict_probability( current_action_classifier_, x, const_cast<double*>(predicted_current_action_probabilities_.data()) );
+    predicted_current_action_label_ = svm_predict_probability( current_action_classifier_, x, const_cast<double*>(predicted_current_action_probabilities_.data()) );
 
     // TODO: predict future action label
     // TODO: predict future motion

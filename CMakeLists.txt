@@ -62,8 +62,8 @@ rosbuild_add_library(pcml
   src/learning/train_future_motion.cpp
 
   # libsvm
-  lib/svm.h
-  lib/svm.cpp
+  lib/libsvm/svm.h
+  lib/libsvm/svm.cpp
 )
 
 rosbuild_add_executable(test_cad120 src/test_cad120.cpp)

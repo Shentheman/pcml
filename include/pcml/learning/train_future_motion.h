@@ -7,7 +7,7 @@
 #include <algorithm>
 
 // libsvm
-#include <svm.h>
+#include <libsvm/svm.h>
 
 #include <eigen3/Eigen/Dense>
 
@@ -81,6 +81,13 @@ public:
     void predict(const Eigen::MatrixXd& motion);
 
     /**
+     * @brief predictedCurrentAction Returns the most likely action label of current time.
+     *                               Must be called after predict() function.
+     * @return Action label which is the most likely at the current time.
+     */
+    int predictedCurrentAction();
+
+    /**
      * @brief predictedCurrentActionProbabilities Returns the (softmax) probability distribution of current action labels.
      *                                            result(i) = (probability of action label i)
      *                                            Must be called after predict() function.
@@ -132,6 +139,8 @@ private:
     // training model
     svm_model* current_action_classifier_;
 
+    // prediction result
+    int predicted_current_action_label_;
     Eigen::VectorXd predicted_current_action_probabilities_;
     std::vector<Eigen::MatrixXd> predicted_future_action_probabilities_;
     std::vector<Eigen::MatrixXd> predicted_motions_;

@@ -12,7 +12,7 @@ Point Cloud and Machine Learning
 * openni_tracker
  * $ sudo apt-get install ros-indigo-openni-tracker
 * libsvm
- * put 'svm.h', 'svm.cpp' into lib/
+ * put 'svm.h', 'svm.cpp' into lib/libsvm
 
 ## Components
 * msgs
