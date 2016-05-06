@@ -30,7 +30,7 @@ int main(int argc, char** argv)
             break;
 
         default:
-            fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
+            fprintf(stderr, "Usage: infer_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
             fflush(stderr);
             return 1;
         }
@@ -38,19 +38,19 @@ int main(int argc, char** argv)
 
     if (!dfound || !cfound)
     {
-        fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
+        fprintf(stderr, "Usage: infer_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
         fflush(stderr);
         return 1;
     }
 
+    // load trained model
     pcml::TrainFutureMotion trainer;
     trainer.loadConfig(model_directory);
+    trainer.loadTrainedModel(model_directory);
 
     const std::vector<std::string>& joint_names = trainer.jointNames();
 
-    // add input motions to trainer
     pcml::CAD120Reader reader(cad120_directory);
-
     for (int subject=0; subject < reader.numSubjects(); subject++)
     {
         for (int action=0; action < reader.numActions(subject); action++)
@@ -61,8 +61,7 @@ int main(int argc, char** argv)
                 printf("Parsing [subject %d, action %d, video %d]\n", subject, action, video);
                 fflush(stdout);
 
-                std::vector<Eigen::VectorXd> motion_list;
-                std::vector<int> action_labels_list;
+                Eigen::MatrixXd motion( joint_names.size() * 3, 0 );
 
                 // reading a demonstration
                 reader.startReadFrames(subject, action, video);
@@ -79,42 +78,32 @@ int main(int argc, char** argv)
 
                         current_motion.block( i*3, 0, 3, 1 ) = position;
                     }
-                    motion_list.push_back(current_motion);
 
-                    // retrieve action label
-                    action_labels_list.push_back( reader.getSubActivityIndex() );
+                    motion.conservativeResize(Eigen::NoChange, motion.cols() + 1);
+                    motion.col(motion.cols() - 1) = current_motion;
 
-                    /*// print sub-activity per frame
-                    printf("sub-activity at %04d: %s\n", frame_idx, reader.getSubActivity().c_str());
-                    fflush(stdout);
-                    */
+                    if (frame_idx > trainer.getT())
+                    {
+                        // retrieve action labels
+                        const int ground_truth_sub_activity_label = reader.getSubActivityIndex();
+
+                        trainer.predict(motion);
+                        const int predicted_sub_activity_label = trainer.predictedCurrentAction();
+
+                        // print sub-activity per frame
+                        printf("sub-activity at %04d: %s (truth: %d, prediction: %d) \n",
+                               frame_idx,
+                               ground_truth_sub_activity_label == predicted_sub_activity_label ? "True " : "False",
+                               ground_truth_sub_activity_label,
+                               predicted_sub_activity_label);
+                        fflush(stdout);
+                    }
 
                     frame_idx++;
                 }
-
-                // conversion from stl vector to eigen matrix/vector
-                Eigen::MatrixXd motion( motion_list[0].rows(), motion_list.size() );
-                Eigen::VectorXi action_labels( action_labels_list.size() );
-
-                for (int i=0; i<motion_list.size(); i++)
-                {
-                    motion.col(i) = motion_list[i];
-                    action_labels(i) = action_labels_list[i];
-                }
-
-                trainer.addMotion(motion, action_labels);
             }
         }
     }
-
-    // training
-    printf("Training takes a while...\n"); fflush(stdout);
-    trainer.train();
-    printf("Training complete\n"); fflush(stdout);
-
-    // saving the trained model
-    printf("Saving the trained model\n"); fflush(stdout);
-    trainer.saveTrainedModel(model_directory);
 
     return 0;
 }

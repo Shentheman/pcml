@@ -66,6 +66,11 @@ public:
         return joint_names_;
     }
 
+    inline int getT()
+    {
+        return T_;
+    }
+
     /**
      * @brief addMotion Add a training motion.
      * @param motion Motion data of 15 fps as (joint motions as (num_joints * 3) X (num_frames) matrix

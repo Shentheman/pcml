@@ -183,6 +183,13 @@ void TrainFutureMotion::predict(const Eigen::MatrixXd& motion)
     deleteSvmInput(x);
 }
 
+int TrainFutureMotion::predictedCurrentAction()
+{
+    Eigen::VectorXd::Index row;
+    predicted_current_action_probabilities_.maxCoeff(&row, (Eigen::VectorXd::Index*)0);
+    return row;
+}
+
 Eigen::VectorXd TrainFutureMotion::predictedCurrentActionProbabilities()
 {
     return predicted_current_action_probabilities_;

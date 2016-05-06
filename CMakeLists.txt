@@ -28,7 +28,8 @@ find_package(yaml-cpp REQUIRED)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
+set(ROS_BUILD_TYPE RelWithDebInfo)
+#set(ROS_BUILD_TYPE Debug)
 
 rosbuild_init()
 
@@ -79,9 +80,8 @@ rosbuild_add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 rosbuild_add_executable(kinect_frequency src/kinect_frequency.cpp)
 rosbuild_add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
 rosbuild_add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
-
-# training is done offline, without ros
 add_executable(train_cad120 src/train_cad120.cpp)
+add_executable(infer_cad120 src/infer_cad120.cpp)
 
 target_link_libraries(test_cad120
     pcml
@@ -98,5 +98,8 @@ target_link_libraries(future_obstacle_visualizer
     pcml
 )
 target_link_libraries(train_cad120
+    pcml
+)
+target_link_libraries(infer_cad120
     pcml
 )

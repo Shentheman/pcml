@@ -13,24 +13,23 @@
 namespace pcml
 {
 
-
 const char* CAD120Reader::joint_names_[num_joints_] =
 {
-    "HEAD",
-    "NECK",
-    "TORSO",
-    "LEFT_SHOULDER",
-    "LEFT_ELBOW",
-    "RIGHT_SHOULDER",
-    "RIGHT_ELBOW",
-    "LEFT_HIP",
-    "LEFT_KNEE",
-    "RIGHT_HIP",
-    "RIGHT_KNEE",
-    "LEFT_HAND",
-    "RIGHT_HAND",
-    "LEFT_FOOT",
-    "RIGHT_FOOT",
+    "head",
+    "neck",
+    "torso",
+    "left_shoulder",
+    "left_elbow",
+    "right_shoulder",
+    "right_elbow",
+    "left_hip",
+    "left_knee",
+    "right_hip",
+    "right_knee",
+    "left_hand",
+    "right_hand",
+    "left_foot",
+    "right_foot",
 };
 
 const int CAD120Reader::skeletons_[num_skeletons_][2] =
@@ -94,7 +93,20 @@ bool CAD120Reader::getJointPosition(const std::string& joint_name, Eigen::Vector
     {
         if (joint_name == joint_names_[i])
         {
-            position = joint_pos_[i];
+            // transform
+            const Eigen::Matrix4d& transform = subjects_[subject_].actions[action_].videos[video_].global_transform;
+
+            Eigen::Vector4d v;
+            v << joint_pos_[i], 1.0;
+            std::swap(v(1), v(2));
+
+            v = transform * v;
+            v(0) /= v(3);
+            v(1) /= v(3);
+            v(2) /= v(3);
+
+            position = v.block(0, 0, 3, 1) / 1000.;
+
             return true;
         }
     }
