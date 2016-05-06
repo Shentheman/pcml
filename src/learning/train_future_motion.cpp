@@ -72,16 +72,22 @@ void removeTrailingSlash(std::string& str)
         str = str.substr(0, str.size() - 1);
 }
 
+void exportSvmInputToMatlabFormat(const std::string& directory)
+{
+}
+
 } // namespace internal
 
 
-TrainFutureMotion::TrainFutureMotion()
+TrainFutureMotion::TrainFutureMotion(const std::string& directory)
+    : directory_(directory)
 {
     setJointNames(SkeletonStream::jointNamesWholeBody());
     setNumActionTypes(1);
     setT(15);
     setD(15);
     setRBFGamma(1.0);
+    setSVM_C(1.0);
 }
 
 void TrainFutureMotion::addMotion(const Eigen::MatrixXd& motion, const Eigen::VectorXi action_label)
@@ -93,6 +99,70 @@ void TrainFutureMotion::addMotion(const Eigen::MatrixXd& motion, const Eigen::Ve
 }
 
 void TrainFutureMotion::train()
+{
+    svm_problem* current_action_prob = createSVMProblem();
+    svm_parameter param = createSVMParameter();
+
+    // train current action classifier
+    const char* error_msg = svm_check_parameter( current_action_prob, &param );
+    if (error_msg)
+    {
+        fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
+        fflush(stderr);
+        assert(error_msg == 0);
+        return;
+    }
+
+    current_action_classifier_ = svm_train( current_action_prob, &param );
+
+    // TODO: train future action classifier
+    // TODO: train future motion regressor
+
+    // SVM problem should not be freed?
+    //deleteSvmProblem(current_action_prob);
+}
+
+void TrainFutureMotion::crossValidationSVMs()
+{
+    svm_problem* current_action_prob = createSVMProblem();
+    svm_parameter param = createSVMParameter();
+
+    // shuffle the SVM input (Not sure it affects to cross-validation results)
+    std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
+
+    // train current action classifier
+    const char* error_msg = svm_check_parameter( current_action_prob, &param );
+    if (error_msg)
+    {
+        fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
+        fflush(stderr);
+        assert(error_msg == 0);
+        return;
+    }
+
+    double* target = new double[ current_action_prob->l ];
+    svm_cross_validation( current_action_prob, &param, 5, target );
+
+    int total_correct = 0;
+    for (int i=0; i<current_action_prob->l; i++)
+    {
+        if (current_action_prob->y[i] == target[i])
+            total_correct++;
+    }
+
+    printf("Cross validation report:\n");
+    printf(" Accuracy: %lf\%\n", (double)total_correct / current_action_prob->l * 100.);
+    fflush(stdout);
+
+    delete target;
+
+    // TODO: cross-validate future action classifier
+
+    // SVM problem should not be freed?
+    //deleteSvmProblem(current_action_prob);
+}
+
+svm_problem* TrainFutureMotion::createSVMProblem()
 {
     using internal::TrainingInputId;
     using internal::newSvmInput;
@@ -133,27 +203,30 @@ void TrainFutureMotion::train()
         current_action_prob->y[i] = y;
     }
 
+    return current_action_prob;
+}
+
+svm_parameter TrainFutureMotion::createSVMParameter()
+{
     // svm parameters
     svm_parameter param;
     param.svm_type = C_SVC;
     param.kernel_type = RBF;
+    param.degree = 1;
     param.gamma = rbf_gamma_;
+    param.coef0 = 0.;
     param.cache_size = 100;
     param.eps = 0.001;
-    param.C = 1;
+    param.C = svm_c_;
     param.nr_weight = 0;
     param.weight_label = 0;
     param.weight = 0;
+    param.nu = 0.5;
+    param.p = 0.1;
     param.shrinking = 1;
     param.probability = 1;
 
-    // train current action classifier
-    current_action_classifier_ = svm_train( current_action_prob, &param );
-
-    // TODO: train future action classifier
-    // TODO: train future motion regressor
-
-    deleteSvmProblem(current_action_prob);
+    return param;
 }
 
 void TrainFutureMotion::predict(const Eigen::MatrixXd& motion)
@@ -206,12 +279,12 @@ Eigen::MatrixXd TrainFutureMotion::predictedMotion(int action_label)
     return predicted_motions_[action_label];
 }
 
-void TrainFutureMotion::loadConfig(std::string directory)
+void TrainFutureMotion::loadConfig()
 {
-    internal::removeTrailingSlash(directory);
+    internal::removeTrailingSlash(directory_);
 
     // load config in yaml format
-    YAML::Node config = YAML::LoadFile( directory + "/config.yaml" );
+    YAML::Node config = YAML::LoadFile( directory_ + "/config.yaml" );
 
     joint_names_ = config["joint names"].as<std::vector<std::string> >();
     num_action_types_ = config["num action types"].as<int>();
@@ -220,12 +293,13 @@ void TrainFutureMotion::loadConfig(std::string directory)
     D_ = config["D"]["value"].as<int>();
     D_stride_ = config["D"]["stride"].as<int>();
     rbf_gamma_ = config["RBF gamma"].as<double>();
+    svm_c_ = config["SVM C"].as<double>();
     num_spgp_pseudo_inputs_ = config["num SPGP pseudo inputs"].as<int>();
 }
 
-void TrainFutureMotion::saveConfig(std::string directory)
+void TrainFutureMotion::saveConfig()
 {
-    internal::removeTrailingSlash(directory);
+    internal::removeTrailingSlash(directory_);
 
     // save config in yaml format
     YAML::Node config;
@@ -236,28 +310,29 @@ void TrainFutureMotion::saveConfig(std::string directory)
     config["D"]["value"] = D_;
     config["D"]["stride"] = D_stride_;
     config["RBF gamma"] = rbf_gamma_;
+    config["SVM C"] = svm_c_;
     config["num SPGP pseudo inputs"] = num_spgp_pseudo_inputs_;
 
-    std::ofstream out(directory + "/config.yaml");
+    std::ofstream out(directory_ + "/config.yaml");
     out << config;
 }
 
-void TrainFutureMotion::loadTrainedModel(std::string directory)
+void TrainFutureMotion::loadTrainedModel()
 {
-    internal::removeTrailingSlash(directory);
+    internal::removeTrailingSlash(directory_);
 
     // load current action label svm classificatio model
-    YAML::Node models = YAML::LoadFile( directory + "/models.yaml" );
+    YAML::Node models = YAML::LoadFile( directory_ + "/models.yaml" );
 
     current_action_classifier_ = svm_load_model( models["current action model"].as<std::string>().c_str() );
 }
 
-void TrainFutureMotion::saveTrainedModel(std::string directory)
+void TrainFutureMotion::saveTrainedModel()
 {
-    internal::removeTrailingSlash(directory);
+    internal::removeTrailingSlash(directory_);
 
     // save current action label svm classificatio model
-    std::string current_action_classifier_filename = directory + "/current_action_model.svm";
+    std::string current_action_classifier_filename = directory_ + "/current_action_model.svm";
     svm_save_model( current_action_classifier_filename.c_str(), current_action_classifier_ );
 
     // save file list in yaml format
@@ -265,7 +340,7 @@ void TrainFutureMotion::saveTrainedModel(std::string directory)
 
     models["current action model"] = current_action_classifier_filename;
 
-    std::ofstream out(directory + "/models.yaml");
+    std::ofstream out(directory_ + "/models.yaml");
     out << models;
 }
 

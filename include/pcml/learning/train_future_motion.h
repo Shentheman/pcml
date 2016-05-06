@@ -23,7 +23,7 @@ private:
 
 public:
 
-    TrainFutureMotion();
+    TrainFutureMotion(const std::string& directory);
 
     inline void setJointNames(const std::vector<std::string>& joint_names, const std::string& root_joint_name = "torso")
     {
@@ -56,6 +56,11 @@ public:
         rbf_gamma_ = gamma;
     }
 
+    inline void setSVM_C(double C)
+    {
+        svm_c_ = C;
+    }
+
     inline void setNumSPGPPseudoInputs(int num_spgp_pseudo_inputs)
     {
         num_spgp_pseudo_inputs_ = num_spgp_pseudo_inputs;
@@ -84,6 +89,11 @@ public:
      * @brief train Train using all added training motions and store the trained parameters (for Gaussian Process and SVM classifiers)
      */
     void train();
+
+    /**
+     * @brief crossValidationSVMs Run cross validation for SVMs
+     */
+    void crossValidationSVMs();
 
     /**
      * GP time complexity (estimated)
@@ -128,20 +138,29 @@ public:
     Eigen::MatrixXd predictedMotion(int action_label);
 
     // load/save
-    void loadConfig(std::string directory);
-    void saveConfig(std::string directory);
-    void loadTrainedModel(std::string directory);
-    void saveTrainedModel(std::string directory);
+    void loadConfig();
+    void saveConfig();
+    void loadTrainedModel();
+    void saveTrainedModel();
+
+    // debug
 
 private:
 
-    /// extract feature from input motion.
-    /// Input before striding.
+    // extract feature from input motion.
+    // Input before striding.
     Eigen::VectorXd extractFeature(const Eigen::MatrixXd& motion);
 
-    /// convert future motion to output for learning.
-    /// Input before striding.
+    // convert future motion to output for learning.
+    // Input before striding.
     Eigen::MatrixXd convertFutureMotion(const Eigen::VectorXd& current_motion, const Eigen::MatrixXd &future_motion);
+
+    // SVM submodules
+    svm_problem* createSVMProblem();
+    svm_parameter createSVMParameter();
+
+    // model directory for save/load
+    std::string directory_;
 
     // training parameters
     std::vector<std::string> joint_names_;
@@ -152,6 +171,7 @@ private:
     int D_; // # of future frames to be predicted
     int D_stride_;
     double rbf_gamma_; // RBF(u, v) = exp(-gamma * |u-v|^2)
+    double svm_c_;
     int num_spgp_pseudo_inputs_; // # of pseudo inputs for Sparse Pseudo-input Gaussian Processes (SPGP)
 
     // training input

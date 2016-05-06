@@ -12,10 +12,11 @@ int main(int argc, char** argv)
     int getopt_res;
     std::string model_directory = "";
     std::string cad120_directory = "";
+    bool cross_validation = false;
     bool dfound = false;
     bool cfound = false;
 
-    while ((getopt_res = getopt(argc, argv, "d:c:")) != -1)
+    while ((getopt_res = getopt(argc, argv, "d:c:v")) != -1)
     {
         switch (getopt_res)
         {
@@ -29,8 +30,12 @@ int main(int argc, char** argv)
             cad120_directory = optarg;
             break;
 
+        case 'v':
+            cross_validation = true;
+            break;
+
         default:
-            fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
+            fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v]\n");
             fflush(stderr);
             return 1;
         }
@@ -38,13 +43,13 @@ int main(int argc, char** argv)
 
     if (!dfound || !cfound)
     {
-        fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH\n");
+        fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v]\n");
         fflush(stderr);
         return 1;
     }
 
-    pcml::TrainFutureMotion trainer;
-    trainer.loadConfig(model_directory);
+    pcml::TrainFutureMotion trainer(model_directory);
+    trainer.loadConfig();
 
     const std::vector<std::string>& joint_names = trainer.jointNames();
 
@@ -107,14 +112,23 @@ int main(int argc, char** argv)
         }
     }
 
-    // training
-    printf("Training takes a while...\n"); fflush(stdout);
-    trainer.train();
-    printf("Training complete\n"); fflush(stdout);
+    if (cross_validation)
+    {
+        printf("Doing cross validation takes a while...\n"); fflush(stdout);
+        trainer.crossValidationSVMs();
+        printf("Cross validation complete\n"); fflush(stdout);
+    }
+    else
+    {
+        // training
+        printf("Training takes a while...\n"); fflush(stdout);
+        trainer.train();
+        printf("Training complete\n"); fflush(stdout);
 
-    // saving the trained model
-    printf("Saving the trained model\n"); fflush(stdout);
-    trainer.saveTrainedModel(model_directory);
+        // saving the trained model
+        printf("Saving the trained model\n"); fflush(stdout);
+        trainer.saveTrainedModel();
+    }
 
     return 0;
 }

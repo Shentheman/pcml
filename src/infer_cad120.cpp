@@ -44,9 +44,9 @@ int main(int argc, char** argv)
     }
 
     // load trained model
-    pcml::TrainFutureMotion trainer;
-    trainer.loadConfig(model_directory);
-    trainer.loadTrainedModel(model_directory);
+    pcml::TrainFutureMotion trainer(model_directory);
+    trainer.loadConfig();
+    trainer.loadTrainedModel();
 
     const std::vector<std::string>& joint_names = trainer.jointNames();
 
