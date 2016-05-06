@@ -91,11 +91,17 @@ int main(int argc, char** argv)
                         const int predicted_sub_activity_label = trainer.predictedCurrentAction();
 
                         // print sub-activity per frame
-                        printf("sub-activity at %04d: %s (truth: %d, prediction: %d) \n",
+                        printf("sub-activity at %04d: %s (truth: %d, prediction: %d)",
                                frame_idx,
                                ground_truth_sub_activity_label == predicted_sub_activity_label ? "True " : "False",
                                ground_truth_sub_activity_label,
                                predicted_sub_activity_label);
+
+                        // print sub-activity probabilities
+                        const Eigen::VectorXd probs = trainer.predictedCurrentActionProbabilities();
+                        for (int i=0; i<probs.rows(); i++)
+                            printf(" %.2lf", probs(i));
+                        printf("\n");
                         fflush(stdout);
                     }
 

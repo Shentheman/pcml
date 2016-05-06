@@ -156,7 +156,7 @@ void CAD120Reader::setDirectory(const std::string& directory)
         return;
     }
 
-    for (int i=1; i<=4; i++)
+    for (int i=1; i<=5; i++)
     {
         char annotation_directory[NAME_MAX + 1];
         sprintf(annotation_directory, "%s/Subject%d_annotations", directory_.c_str(), i);

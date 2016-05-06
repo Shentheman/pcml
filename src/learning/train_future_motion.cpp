@@ -103,9 +103,10 @@ void TrainFutureMotion::train()
     // get training input from motions
     for (int i=0; i<motions_.size(); i++)
     {
+        // skip very near activities
         // past: (t-T+1)~t, current: t, future: t~(t+D-1) (inclusive)
         // Ex. past: 0~14, current: 14, future: 14~28 (inclusive)
-        for (int t = T_ - 1; t + D_ < motions_[i].cols(); t++)
+        for (int t = T_ - 1; t + D_ < motions_[i].cols(); t += T_ / 2)
             training_input_ids.push_back( TrainingInputId(i, t) );
     }
 
