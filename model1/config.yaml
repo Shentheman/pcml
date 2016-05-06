@@ -15,5 +15,6 @@ T:
 D:
   value: 15
   stride: 1
-RBF gamma: 1
+SVM C: 1
+RBF gamma: 0.001
 num SPGP pseudo inputs: 20
