@@ -96,6 +96,11 @@ public:
     void crossValidationSVMs();
 
     /**
+     * @brief gridSearchSVMHyperparameters Find the best SVM hyperparameters in terms of accuracy
+     */
+    void gridSearchSVMHyperparameters();
+
+    /**
      * GP time complexity (estimated)
      *  featuredimperframe * futureframes * actiontype * (examples * featuredimperframe * pastframes + examples * examples)
      *  45 * 5 * 10 * (20 * 45 * 5 + 20 * 20) = 11025000

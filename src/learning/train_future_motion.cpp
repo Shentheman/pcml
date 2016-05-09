@@ -162,6 +162,115 @@ void TrainFutureMotion::crossValidationSVMs()
     //deleteSvmProblem(current_action_prob);
 }
 
+void TrainFutureMotion::gridSearchSVMHyperparameters()
+{
+    svm_problem* current_action_prob = createSVMProblem();
+    svm_parameter param = createSVMParameter();
+
+    // shuffle the SVM input (Not sure it affects to cross-validation results)
+    std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
+
+    /*// libsvm defalt
+    const int c_start = -5;
+    const int c_end = 15;
+    const int c_step = 2;
+
+    const int gamma_start = -15;
+    const int gamma_end = 3;
+    const int gamma_step = 2;
+    */
+    const int c_start = -5;
+    const int c_end = 5;
+    const int c_step = 2;
+
+    const int gamma_start = -5;
+    const int gamma_end = 3;
+    const int gamma_step = 2;
+
+    std::vector<double> c_list;
+    for (int c = c_start; c <= c_end; c += c_step)
+        c_list.push_back((c < 0) ? 1. / (1 << (-c)) : (1 << c));
+
+    std::vector<double> gamma_list;
+    for (int g = gamma_start; g <= gamma_end; g += gamma_step)
+        gamma_list.push_back((g < 0) ? 1. / (1 << (-g)) : (1 << g));
+
+    std::vector<std::vector<double> > accuracy(c_list.size(), std::vector<double>(gamma_list.size()));
+
+    double* target = new double[ current_action_prob->l ];
+    for (int i=0; i<c_list.size(); i++)
+    {
+        for (int j=0; j<gamma_list.size(); j++)
+        {
+            const double C = c_list[i];
+            const double gamma = gamma_list[j];
+
+            printf("C = %lf, gamma = %lf, ", C, gamma);
+            fflush(stdout);
+
+            param.C = C;
+            param.gamma = gamma;
+
+            // train current action classifier
+            const char* error_msg = svm_check_parameter( current_action_prob, &param );
+            if (error_msg)
+            {
+                fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
+                fflush(stderr);
+                assert(error_msg == 0);
+                return;
+            }
+
+            svm_cross_validation( current_action_prob, &param, 5, target );
+
+            int total_correct = 0;
+            for (int i=0; i<current_action_prob->l; i++)
+            {
+                if (current_action_prob->y[i] == target[i])
+                    total_correct++;
+            }
+            const double acc = (double)total_correct / current_action_prob->l * 100.;
+
+            printf("Accuracy: %lf\%\n", acc);
+            fflush(stdout);
+
+            accuracy[i][j] = acc;
+        }
+    }
+
+    delete target;
+
+    printf("C:");
+    for (int c = c_start; c <= c_end; c += c_step)
+        printf(" 2^%d", c);
+    printf("\n");
+
+    printf("G:");
+    for (int g = gamma_start; g <= gamma_end; g += gamma_step)
+        printf(" 2^%d", g);
+    printf("\n");
+
+    printf("                gamma\n");
+    printf("                ");
+    for (int i=0; i<accuracy[0].size(); i++)
+        printf("%8d", i);
+    printf("\n");
+
+    for (int i=0; i<accuracy.size(); i++)
+    {
+        if (i==0) printf("C       ");
+        else printf("        ");
+
+        printf("%8d", i);
+        for (int j=0; j<accuracy[i].size(); j++)
+            printf("%8.2lf", accuracy[i][j]);
+        printf("\n");
+    }
+
+    // SVM problem should not be freed?
+    //deleteSvmProblem(current_action_prob);
+}
+
 svm_problem* TrainFutureMotion::createSVMProblem()
 {
     using internal::TrainingInputId;

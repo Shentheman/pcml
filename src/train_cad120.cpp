@@ -13,10 +13,11 @@ int main(int argc, char** argv)
     std::string model_directory = "";
     std::string cad120_directory = "";
     bool cross_validation = false;
+    bool grid_search = false;
     bool dfound = false;
     bool cfound = false;
 
-    while ((getopt_res = getopt(argc, argv, "d:c:v")) != -1)
+    while ((getopt_res = getopt(argc, argv, "d:c:vg")) != -1)
     {
         switch (getopt_res)
         {
@@ -34,8 +35,12 @@ int main(int argc, char** argv)
             cross_validation = true;
             break;
 
+        case 'g':
+            grid_search = true;
+            break;
+
         default:
-            fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v]\n");
+            fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v] [-g]\n");
             fflush(stderr);
             return 1;
         }
@@ -43,7 +48,7 @@ int main(int argc, char** argv)
 
     if (!dfound || !cfound)
     {
-        fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v]\n");
+        fprintf(stderr, "Usage: train_cad120 -c CAD120_DIRECTORY_PATH -d MODEL_DIRECTORY_PATH [-v] [-g]\n");
         fflush(stderr);
         return 1;
     }
@@ -118,7 +123,15 @@ int main(int argc, char** argv)
         trainer.crossValidationSVMs();
         printf("Cross validation complete\n"); fflush(stdout);
     }
-    else
+
+    if (grid_search)
+    {
+        printf("Doing grid search takes a while...\n"); fflush(stdout);
+        trainer.gridSearchSVMHyperparameters();
+        printf("Grid search complete\n"); fflush(stdout);
+    }
+
+    if (!cross_validation && !grid_search)
     {
         // training
         printf("Training takes a while...\n"); fflush(stdout);
