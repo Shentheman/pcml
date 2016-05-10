@@ -128,7 +128,7 @@ void TrainFutureMotion::crossValidationSVMs()
     svm_parameter param = createSVMParameter();
 
     // shuffle the SVM input (Not sure it affects to cross-validation results)
-    std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
+    //std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
 
     // train current action classifier
     const char* error_msg = svm_check_parameter( current_action_prob, &param );
@@ -168,7 +168,7 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
     svm_parameter param = createSVMParameter();
 
     // shuffle the SVM input (Not sure it affects to cross-validation results)
-    std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
+    //std::random_shuffle(&current_action_prob->x[0], &current_action_prob->x[0] + current_action_prob->l);
 
     /*// libsvm defalt
     const int c_start = -5;
@@ -180,10 +180,10 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
     const int gamma_step = 2;
     */
     const int c_start = -5;
-    const int c_end = 5;
+    const int c_end = 15;
     const int c_step = 2;
 
-    const int gamma_start = -5;
+    const int gamma_start = -15;
     const int gamma_end = 3;
     const int gamma_step = 2;
 
