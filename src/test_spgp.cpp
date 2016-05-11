@@ -2,12 +2,17 @@
 #include <sstream>
 #include <iostream>
 
+#include <stdlib.h>
+#include <time.h>
+
 #include <eigen3/Eigen/Dense>
 
 #include <pcml/learning/spgp.h>
 
 int main()
 {
+    srand(time(0));
+
     Eigen::MatrixXd X;
     Eigen::VectorXd y;
     Eigen::MatrixXd Xt;

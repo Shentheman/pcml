@@ -18,6 +18,7 @@ private:
     typedef dlib::matrix<double,0,1> column_vector;
 
     static double var(const Eigen::VectorXd& y);
+    static double mean(const Eigen::VectorXd& y);
 
 public:
 
@@ -42,6 +43,8 @@ public:
      */
     void train();
 
+    void predict();
+
 private:
 
     double kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, const Eigen::VectorXd& b, double c, double sig);
@@ -49,6 +52,7 @@ private:
     const column_vector likelihoodDerivative(const column_vector& x);
 
     void optimizePseudoinputsAndHyperparameters();
+    void precomputePredictiveMatrices();
 
     int num_pseudoinputs_;
 
@@ -56,6 +60,15 @@ private:
     Eigen::MatrixXd X_; // each 'row' corresponds to one input point
     Eigen::VectorXd y_;
     double y_mean_;
+    Eigen::VectorXd y0_; // y0 = y - y_mean
+
+    // pseudo-inputs
+    Eigen::MatrixXd xb_;
+
+    // hyperparameters
+    Eigen::VectorXd b_;
+    double c_;
+    double sig_;
 
     int dim_; // dimension of input point
 };
