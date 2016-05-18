@@ -76,10 +76,22 @@ int main()
     spgp.setJitter(1e-6);
     spgp.setNumPseudoinputs(20);
 
+    // train
     for (int i=0; i<X.rows(); i++)
         spgp.addInput(X.row(i), y(i));
-
     spgp.train();
+
+    // predict
+    Eigen::VectorXd mu;
+    Eigen::VectorXd sigma_square;
+    spgp.predict(Xt, mu, sigma_square);
+    spgp.addInputNoiseToPredictedSigma(sigma_square);
+
+    // print to matlab data format
+    fp = fopen("../spgp_data/test_outputs", "w");
+    for (int i=0; i<mu.rows(); i++)
+        fprintf(fp, "%lf %lf\n", mu(i), sigma_square(i));
+    fclose(fp);
 
     fflush(stdout);
     return 0;

@@ -43,16 +43,18 @@ public:
      */
     void train();
 
-    void predict();
+    void predict(const Eigen::MatrixXd& Xt_, Eigen::VectorXd& mu, Eigen::VectorXd& sigma_square);
+    void addInputNoiseToPredictedSigma(Eigen::VectorXd& sigma_square);
 
 private:
 
-    double kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, const Eigen::VectorXd& b, double c, double sig);
+    double kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2); // kernel function with optimized hyperparameters b_ and c_
+    double kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, const Eigen::VectorXd& b, double c);
     double likelihood(const column_vector& x);
     const column_vector likelihoodDerivative(const column_vector& x);
 
     void optimizePseudoinputsAndHyperparameters();
-    void precomputePredictiveMatrices();
+    void precomputePredictiveVariables();
 
     int num_pseudoinputs_;
 
@@ -65,10 +67,15 @@ private:
     // pseudo-inputs
     Eigen::MatrixXd xb_;
 
-    // hyperparameters
+    // optimized hyperparameters
     Eigen::VectorXd b_;
     double c_;
     double sig_;
+
+    // trained matrices
+    Eigen::MatrixXd Lm_;
+    Eigen::MatrixXd L_;
+    Eigen::VectorXd bet_;
 
     int dim_; // dimension of input point
 };

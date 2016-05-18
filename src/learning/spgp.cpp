@@ -60,7 +60,7 @@ void SparsePseudoinputGaussianProcess::addInput(const Eigen::VectorXd &x, double
 void SparsePseudoinputGaussianProcess::train()
 {
     optimizePseudoinputsAndHyperparameters();
-    precomputePredictiveMatrices();
+    precomputePredictiveVariables();
 }
 
 void SparsePseudoinputGaussianProcess::optimizePseudoinputsAndHyperparameters()
@@ -88,7 +88,8 @@ void SparsePseudoinputGaussianProcess::optimizePseudoinputsAndHyperparameters()
     hyp_init(dim+2,1) = log(var(y0,1)/4); % log noise
     */
 
-    y0_ = y_.array() - mean(y_);
+    y_mean_ = mean(y_);
+    y0_ = y_.array() - y_mean_;
     const double v = var(y_);
     for (int i=0; i<dim_; i++)
         initial_x(num_pseudoinputs_ * dim_ + i) = -2 * std::log( (X_.col(i).maxCoeff() - X_.col(i).minCoeff()) / 2. );
@@ -116,14 +117,12 @@ void SparsePseudoinputGaussianProcess::optimizePseudoinputsAndHyperparameters()
     sig_ = std::exp( initial_x((num_pseudoinputs_ + 1) * dim_ + 1) );
 }
 
-void SparsePseudoinputGaussianProcess::precomputePredictiveMatrices()
+void SparsePseudoinputGaussianProcess::precomputePredictiveVariables()
 {
     /*
-    [N,dim] = size(x); n = size(xb,1); Nt = size(xt,1);
+    [N,dim] = size(x); n = size(xb,1); Nt = size(xt,1); % N, dim, Nt are unused.
     sig = exp(hyp(end)); % noise variance
     */
-    const int N = X_.rows();
-    const int dim = dim_;
 
     /*
     % precomputations
@@ -138,13 +137,55 @@ void SparsePseudoinputGaussianProcess::precomputePredictiveMatrices()
     bet = Lm\(V*y);
     clear V
     t_train = toc;
+
+
+    function Kd = kdiag(x,hyp);
+
+    c = exp(hyp(end-1));
+    Kd = repmat(c,size(x,1),1);
     */
 
-    const int M = xb_.size();
-    Eigen::MatrixXd K(M, M);
+    const int n = xb_.rows();
+    Eigen::MatrixXd K(n, n);
+
+    for (int i=0; i<n; i++)
+    {
+        for (int j=0; j<n; j++)
+            K(i,j) = kernel(xb_.row(i).transpose(), xb_.row(j).transpose());
+        K(i,i) += del_;
+    }
+
+    Eigen::LLT<Eigen::MatrixXd> K_cholesky(K);
+    L_ = K_cholesky.matrixL();
+
+    K.conservativeResize(Eigen::NoChange, X_.rows());
+    for (int i=0; i<n; i++)
+    {
+        for (int j=0; j<X_.rows(); j++)
+            K(i,j) = kernel(xb_.row(i).transpose(), X_.row(j).transpose());
+    }
+
+    Eigen::MatrixXd V = L_.triangularView<Eigen::Lower>().solve(K);
+
+    Eigen::VectorXd ep = 1 + (c_ - V.cwiseProduct(V).colwise().sum().array()) / sig_;
+    Eigen::VectorXd ep_sqrt = ep.array().sqrt();
+
+    for (int i=0; i<V.rows(); i++)
+        V.row(i) = V.row(i).cwiseQuotient(ep_sqrt.transpose());
+
+    Eigen::VectorXd y = y0_.cwiseQuotient(ep_sqrt);
+
+    Eigen::MatrixXd VVT_sigI = V * V.transpose();
+    for (int i=0; i<VVT_sigI.rows(); i++)
+        VVT_sigI(i,i) += sig_;
+
+    Eigen::LLT<Eigen::MatrixXd> VVT_sigI_cholesky(VVT_sigI);
+    Lm_ = VVT_sigI_cholesky.matrixL();
+
+    bet_ = Lm_.triangularView<Eigen::Lower>().solve(V * y);
 }
 
-void SparsePseudoinputGaussianProcess::predict()
+void SparsePseudoinputGaussianProcess::predict(const Eigen::MatrixXd& Xt_, Eigen::VectorXd& mu, Eigen::VectorXd& sigma_square)
 {
     // need: L, Lm, bet
     /*
@@ -159,6 +200,28 @@ void SparsePseudoinputGaussianProcess::predict()
     s2 = kdiag(xt,hyp) - sum(lst.^2,1)' + sig*sum(lmst.^2,1)';
     t_test = toc;
     */
+
+    Eigen::MatrixXd K(xb_.rows(), Xt_.rows());
+    for (int i=0; i<xb_.rows(); i++)
+    {
+        for (int j=0; j<Xt_.rows(); j++)
+            K(i,j) = kernel(xb_.row(i).transpose(), Xt_.row(j).transpose());
+    }
+
+    Eigen::MatrixXd lst = L_.triangularView<Eigen::Lower>().solve(K);
+    Eigen::MatrixXd lmst = Lm_.triangularView<Eigen::Lower>().solve(lst);
+    mu = (bet_.transpose() * lmst).transpose();
+    sigma_square = c_ - lst.cwiseProduct(lst).colwise().sum().array() + sig_ * lmst.cwiseProduct(lmst).colwise().sum().array();
+
+    // add y_mean (training input) to mu
+    for (int i=0; i<mu.rows(); i++)
+        mu(i) += y_mean_;
+}
+
+void SparsePseudoinputGaussianProcess::addInputNoiseToPredictedSigma(Eigen::VectorXd& sigma_square)
+{
+    for (int i=0; i<sigma_square.rows(); i++)
+        sigma_square(i) += sig_;
 }
 
 double SparsePseudoinputGaussianProcess::likelihood(const column_vector &w)
@@ -567,7 +630,19 @@ const SparsePseudoinputGaussianProcess::column_vector SparsePseudoinputGaussianP
     return dfw;
 }
 
-double SparsePseudoinputGaussianProcess::kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, const Eigen::VectorXd& b, double c, double sig)
+double SparsePseudoinputGaussianProcess::kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2)
+{
+    double s = 0;
+    for (int i=0; i<dim_; i++)
+    {
+        const double d = x1(i) - x2(i);
+        s += d*d * b_(i);
+    }
+
+    return c_ * std::exp( -0.5 * s );
+}
+
+double SparsePseudoinputGaussianProcess::kernel(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, const Eigen::VectorXd& b, double c)
 {
     double s = 0;
     for (int i=0; i<dim_; i++)
