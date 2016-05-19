@@ -138,6 +138,16 @@ int CAD120Reader::getSubActivityIndex()
     return it->second;
 }
 
+std::string CAD120Reader::getSubActivityFromIndex(int index)
+{
+    for (std::map<std::string, int>::const_iterator it = sub_activity_to_index_map_.begin(); it != sub_activity_to_index_map_.end(); it++)
+    {
+        if (it->second == index)
+            return it->first;
+    }
+    return "unknown";
+}
+
 void CAD120Reader::setDirectory(const std::string& directory)
 {
     if (directory == "")

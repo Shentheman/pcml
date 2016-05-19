@@ -11,9 +11,74 @@
 
 #include <eigen3/Eigen/Dense>
 
+#include <pcml/learning/spgp.h>
+
 
 namespace pcml
 {
+
+namespace internal
+{
+
+// training input identification
+struct TrainingInputId
+{
+    int motion_index;
+    int frame;
+
+    TrainingInputId(int motion_index, int frame)
+        : motion_index(motion_index)
+        , frame(frame)
+    {}
+};
+
+svm_node* newSvmInput(const Eigen::VectorXd& f)
+{
+    int num_nonzero = 0;
+    for (int i=0; i<f.rows(); i++)
+    {
+        if (f(i) != 0.0)
+            num_nonzero++;
+    }
+    svm_node* x = new svm_node[ num_nonzero + 1 ];
+    int idx = 0;
+    for (int i=0; i<f.rows(); i++)
+    {
+        if (f(i) != 0.0)
+        {
+            x[idx].index = i;
+            x[idx].value = f(i);
+            idx++;
+        }
+    }
+    x[idx].index = -1;
+
+    return x;
+}
+
+void deleteSvmInput(svm_node* x)
+{
+    delete x;
+}
+
+void deleteSvmProblem(svm_problem* prob)
+{
+    for (int i=0; i<prob->l; i++)
+        delete prob->x[i];
+    delete prob->x;
+    delete prob->y;
+    delete prob;
+}
+
+void removeTrailingSlash(std::string& str)
+{
+    // remove trailing '/'
+    if (*str.rbegin() == '/')
+        str = str.substr(0, str.size() - 1);
+}
+
+} // namespace internal
+
 
 class TrainFutureMotion
 {
@@ -74,6 +139,11 @@ public:
     inline int getT()
     {
         return T_;
+    }
+
+    inline int numActionTypes() const
+    {
+        return num_action_types_;
     }
 
     /**
@@ -148,8 +218,6 @@ public:
     void loadTrainedModel();
     void saveTrainedModel();
 
-    // debug
-
 private:
 
     // extract feature from input motion.
@@ -163,6 +231,11 @@ private:
     // SVM submodules
     svm_problem* createSVMProblem();
     svm_parameter createSVMParameter();
+
+    // feature extraction from raw motion data
+    void generateTrainingData();
+    Eigen::MatrixXd training_features_;
+    Eigen::VectorXi training_action_labels_;
 
     // model directory for save/load
     std::string directory_;
@@ -185,6 +258,7 @@ private:
 
     // training model
     svm_model* current_action_classifier_;
+    std::vector<std::vector<SparsePseudoinputGaussianProcess> > future_motion_regressor_; // future_motion_regressor_[action_label][future_frame]
 
     // prediction result
     int predicted_current_action_label_;

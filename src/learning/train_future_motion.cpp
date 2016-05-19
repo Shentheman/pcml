@@ -12,73 +12,6 @@
 namespace pcml
 {
 
-namespace internal
-{
-
-// training input identification
-struct TrainingInputId
-{
-    int motion_index;
-    int frame;
-
-    TrainingInputId(int motion_index, int frame)
-        : motion_index(motion_index)
-        , frame(frame)
-    {}
-};
-
-svm_node* newSvmInput(const Eigen::VectorXd& f)
-{
-    int num_nonzero = 0;
-    for (int i=0; i<f.rows(); i++)
-    {
-        if (f(i) != 0.0)
-            num_nonzero++;
-    }
-    svm_node* x = new svm_node[ num_nonzero + 1 ];
-    int idx = 0;
-    for (int i=0; i<f.rows(); i++)
-    {
-        if (f(i) != 0.0)
-        {
-            x[idx].index = i;
-            x[idx].value = f(i);
-            idx++;
-        }
-    }
-    x[idx].index = -1;
-
-    return x;
-}
-
-void deleteSvmInput(svm_node* x)
-{
-    delete x;
-}
-
-void deleteSvmProblem(svm_problem* prob)
-{
-    for (int i=0; i<prob->l; i++)
-        delete prob->x[i];
-    delete prob->x;
-    delete prob->y;
-    delete prob;
-}
-
-void removeTrailingSlash(std::string& str)
-{
-    // remove trailing '/'
-    if (*str.rbegin() == '/')
-        str = str.substr(0, str.size() - 1);
-}
-
-void exportSvmInputToMatlabFormat(const std::string& directory)
-{
-}
-
-} // namespace internal
-
-
 TrainFutureMotion::TrainFutureMotion(const std::string& directory)
     : directory_(directory)
 {
@@ -100,10 +33,12 @@ void TrainFutureMotion::addMotion(const Eigen::MatrixXd& motion, const Eigen::Ve
 
 void TrainFutureMotion::train()
 {
+    generateTrainingData();
+
+    // train current action classifier
     svm_problem* current_action_prob = createSVMProblem();
     svm_parameter param = createSVMParameter();
 
-    // train current action classifier
     const char* error_msg = svm_check_parameter( current_action_prob, &param );
     if (error_msg)
     {
@@ -112,11 +47,10 @@ void TrainFutureMotion::train()
         assert(error_msg == 0);
         return;
     }
-
     current_action_classifier_ = svm_train( current_action_prob, &param );
 
-    // TODO: train future action classifier
     // TODO: train future motion regressor
+    future_motion_regressor_ = std::vector<std::vector<SparsePseudoinputGaussianProcess> >( num_action_types_, std::vector<SparsePseudoinputGaussianProcess>( (D_ + D_stride_ - 1) / D_stride_ ));
 
     // SVM problem should not be freed?
     //deleteSvmProblem(current_action_prob);
@@ -124,6 +58,8 @@ void TrainFutureMotion::train()
 
 void TrainFutureMotion::crossValidationSVMs()
 {
+    generateTrainingData();
+
     svm_problem* current_action_prob = createSVMProblem();
     svm_parameter param = createSVMParameter();
 
@@ -164,6 +100,8 @@ void TrainFutureMotion::crossValidationSVMs()
 
 void TrainFutureMotion::gridSearchSVMHyperparameters()
 {
+    generateTrainingData();
+
     svm_problem* current_action_prob = createSVMProblem();
     svm_parameter param = createSVMParameter();
 
@@ -271,11 +209,9 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
     //deleteSvmProblem(current_action_prob);
 }
 
-svm_problem* TrainFutureMotion::createSVMProblem()
+void TrainFutureMotion::generateTrainingData()
 {
     using internal::TrainingInputId;
-    using internal::newSvmInput;
-    using internal::deleteSvmProblem;
 
     std::vector<TrainingInputId> training_input_ids;
 
@@ -293,6 +229,31 @@ svm_problem* TrainFutureMotion::createSVMProblem()
     // to use only small set of candidates, randomly shuffle and look up first few ids
     int num_candidates = training_input_ids.size();
 
+    training_features_.resize(0, num_candidates);
+    training_action_labels_.resize(num_candidates);
+    for (int i=0; i<num_candidates; i++)
+    {
+        const int& motion_index = training_input_ids[i].motion_index;
+        const int& frame = training_input_ids[i].frame;
+
+        const Eigen::VectorXd f = extractFeature( motions_[motion_index].block(0, frame - T_ + 1, motions_[motion_index].rows(), T_) );
+        const int y = action_labels_[motion_index](frame);
+
+        if (i==0)
+            training_features_.conservativeResize(f.rows(), Eigen::NoChange);
+
+        training_features_.col(i) = f;
+        training_action_labels_(i) = y;
+    }
+}
+
+svm_problem* TrainFutureMotion::createSVMProblem()
+{
+    using internal::newSvmInput;
+    using internal::deleteSvmProblem;
+
+    const int num_candidates = training_features_.cols();
+
     // svm problem specification for current action type classification
     svm_problem* current_action_prob = new svm_problem;
     current_action_prob->l = num_candidates;
@@ -301,11 +262,8 @@ svm_problem* TrainFutureMotion::createSVMProblem()
 
     for (int i=0; i<num_candidates; i++)
     {
-        const int& motion_index = training_input_ids[i].motion_index;
-        const int& frame = training_input_ids[i].frame;
-
-        const Eigen::VectorXd f = extractFeature( motions_[motion_index].block(0, frame - T_ + 1, motions_[motion_index].rows(), T_) );
-        const int y = action_labels_[motion_index](frame);
+        const Eigen::VectorXd f = training_features_.col(i);
+        const int y = training_action_labels_(i);
 
         // svm for current action type classification
         current_action_prob->x[i] = newSvmInput(f);
@@ -358,9 +316,17 @@ void TrainFutureMotion::predict(const Eigen::MatrixXd& motion)
     svm_node* x = newSvmInput(f);
 
     // predict current action label
-    predicted_current_action_label_ = svm_predict_probability( current_action_classifier_, x, const_cast<double*>(predicted_current_action_probabilities_.data()) );
+    int* label = new int[num_action_types_];
+    svm_get_labels( current_action_classifier_, label );
 
-    // TODO: predict future action label
+    double* probabilities = new double[num_action_types_];
+    predicted_current_action_label_ = svm_predict_probability( current_action_classifier_, x, probabilities );
+    for (int i=0; i<num_action_types_; i++)
+        predicted_current_action_probabilities_( label[i] ) = probabilities[i];
+
+    delete label;
+    delete probabilities;
+
     // TODO: predict future motion
 
     deleteSvmInput(x);
@@ -368,9 +334,8 @@ void TrainFutureMotion::predict(const Eigen::MatrixXd& motion)
 
 int TrainFutureMotion::predictedCurrentAction()
 {
-    Eigen::VectorXd::Index row;
-    predicted_current_action_probabilities_.maxCoeff(&row, (Eigen::VectorXd::Index*)0);
-    return row;
+    // based on libsvm function
+    return predicted_current_action_label_;
 }
 
 Eigen::VectorXd TrainFutureMotion::predictedCurrentActionProbabilities()

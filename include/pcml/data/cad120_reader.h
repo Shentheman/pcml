@@ -81,8 +81,9 @@ public:
 
     // data retrieval
     bool getJointPosition(const std::string& joint_name, Eigen::Vector3d& position);
-    std::string getSubActivity();
+    std::string getSubActivity(); // subactivity at current frame
     int getSubActivityIndex();
+    std::string getSubActivityFromIndex(int index); // subactivity string of given index
 
     // rgbd frames
     void startReadFrames(int subject, int action, int video);
