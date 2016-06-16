@@ -162,7 +162,6 @@ void CAD120Reader::setDirectory(const std::string& directory)
     if (!existDirectory(directory_))
     {
         fprintf(stderr, "Invalid CAD120 dataset directory [%s]", directory_.c_str());
-        fflush(stderr);
         return;
     }
 
@@ -271,8 +270,6 @@ void CAD120Reader::print()
             }
         }
     }
-
-    fflush(stdout);
 }
 
 int CAD120Reader::numSubjects()

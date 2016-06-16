@@ -43,7 +43,6 @@ void TrainFutureMotion::train()
     if (error_msg)
     {
         fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
-        fflush(stderr);
         assert(error_msg == 0);
         return;
     }
@@ -71,7 +70,6 @@ void TrainFutureMotion::crossValidationSVMs()
     if (error_msg)
     {
         fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
-        fflush(stderr);
         assert(error_msg == 0);
         return;
     }
@@ -88,7 +86,6 @@ void TrainFutureMotion::crossValidationSVMs()
 
     printf("Cross validation report:\n");
     printf(" Accuracy: %lf\%\n", (double)total_correct / current_action_prob->l * 100.);
-    fflush(stdout);
 
     delete target;
 
@@ -144,7 +141,6 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
             const double gamma = gamma_list[j];
 
             printf("C = %lf, gamma = %lf, ", C, gamma);
-            fflush(stdout);
 
             param.C = C;
             param.gamma = gamma;
@@ -154,7 +150,6 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
             if (error_msg)
             {
                 fprintf(stderr, "SVM parameter Error: %s\n", error_msg);
-                fflush(stderr);
                 assert(error_msg == 0);
                 return;
             }
@@ -170,7 +165,6 @@ void TrainFutureMotion::gridSearchSVMHyperparameters()
             const double acc = (double)total_correct / current_action_prob->l * 100.;
 
             printf("Accuracy: %lf\%\n", acc);
-            fflush(stdout);
 
             accuracy[i][j] = acc;
         }

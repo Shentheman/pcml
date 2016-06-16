@@ -13,9 +13,7 @@
     <param name="render" value="true"/>
 
     <!-- CAD120 parameters-->
-    <!--
-    <param name="cad120_directory" value="/playpen/jaesungp/dataset/CAD120"/>
-    -->
+    <!-- <param name="cad120_directory" value="/playpen/jaesungp/dataset/CAD120"/> -->
   </node>
 
   <!-- future obstacle visualizer -->

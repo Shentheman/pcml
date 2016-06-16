@@ -13,14 +13,15 @@ Point Cloud and Machine Learning
 * openni_tracker
  * $ sudo apt-get install ros-indigo-openni-tracker
 * libsvm (https://www.csie.ntu.edu.tw/~cjlin/libsvm/)
- * put 'svm.h', 'svm.cpp' into lib/libsvm
+ * Put 'svm.h', 'svm.cpp' into lib/libsvm
 * yaml-cpp (https://github.com/jbeder/yaml-cpp)
- * $ mkdir build  
+ * (Add -fPIC option to yaml-cpp/CMakeLists.txt
+   $ mkdir build
    $ cd build  
-   $ cmake -DBUILD_SHARED_LIBS=ON ..  
-   $ make  
-   $ sudo make install
-* CAD120 dataset
+   $ cmake ..
+   $ make
+ * Copy include/yaml-cpp directory and libyaml-cpp.a to pcml/lib directory
+* CAD120 dataset (optional)
  * Fix inconsistency:  
    1. Subject1_annotations/having_meal/0510182019_obj1.txt, delete the last line starting '500,'.
 
@@ -38,7 +39,7 @@ Point Cloud and Machine Learning
        render (bool, default: false)  
        cad120_directory (string, required when input_stream_type = "cad120")  
      **Subscribed Topics**  
-       Topics published by openni_tracker (/head_1, /neck_1, etc.)  
+       TF topics published by openni_tracker (/head_1, /neck_1, etc.)
      **Published Topics**  
        future_obstacle_publisher/future_obstacle_distributions (pcml/FutureObstacleDistributions)
  * future_obstacle_visualizer  

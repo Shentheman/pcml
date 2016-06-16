@@ -1,0 +1,37 @@
+directory: /playpen/jaesungp/dataset/HAD-skeleton
+
+training:
+  - {file: "action0/data000.skel", action_label: 0}
+  - {file: "action0/data001.skel", action_label: 0}
+  - {file: "action0/data002.skel", action_label: 0}
+  - {file: "action0/data003.skel", action_label: 0}
+  - {file: "action1/data000.skel", action_label: 1}
+  - {file: "action1/data001.skel", action_label: 1}
+  - {file: "action1/data002.skel", action_label: 1}
+  - {file: "action1/data003.skel", action_label: 1}
+  - {file: "action2/data000.skel", action_label: 2}
+  - {file: "action2/data001.skel", action_label: 2}
+  - {file: "action2/data002.skel", action_label: 2}
+  - {file: "action2/data003.skel", action_label: 2}
+  - {file: "action3/data000.skel", action_label: 3}
+  - {file: "action3/data001.skel", action_label: 3}
+  - {file: "action3/data002.skel", action_label: 3}
+  - {file: "action3/data003.skel", action_label: 3}
+  
+testing:
+  - {file: "action0/data004.skel", action_label: 0}
+  - {file: "action0/data005.skel", action_label: 0}
+  - {file: "action0/data006.skel", action_label: 0}
+  - {file: "action0/data007.skel", action_label: 0}
+  - {file: "action1/data004.skel", action_label: 1}
+  - {file: "action1/data005.skel", action_label: 1}
+  - {file: "action1/data006.skel", action_label: 1}
+  - {file: "action1/data007.skel", action_label: 1}
+  - {file: "action2/data004.skel", action_label: 2}
+  - {file: "action2/data005.skel", action_label: 2}
+  - {file: "action2/data006.skel", action_label: 2}
+  - {file: "action2/data007.skel", action_label: 2}
+  - {file: "action3/data004.skel", action_label: 3}
+  - {file: "action3/data005.skel", action_label: 3}
+  - {file: "action3/data006.skel", action_label: 3}
+  - {file: "action3/data007.skel", action_label: 3}

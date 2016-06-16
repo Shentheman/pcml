@@ -18,7 +18,7 @@ static void futureObstacleDistributionsCallback(const pcml::FutureObstacleDistri
 }
 
 // visualization marker generator
-void generateEllipsoidMarker(const Eigen::Vector3d& position, const Eigen::Matrix3d& covariance, visualization_msgs::Marker& marker)
+void generateEllipsoidMarker(double radius, const Eigen::Vector3d& position, const Eigen::Matrix3d& covariance, visualization_msgs::Marker& marker)
 {
     marker.type = visualization_msgs::Marker::SPHERE;
 
@@ -42,9 +42,9 @@ void generateEllipsoidMarker(const Eigen::Vector3d& position, const Eigen::Matri
     marker.pose.orientation.z = q.z();
     marker.pose.orientation.w = q.w();
 
-    marker.scale.x = 2. * r(0);
-    marker.scale.y = 2. * r(1);
-    marker.scale.z = 2. * r(2);
+    marker.scale.x = 2. * (r(0) + radius);
+    marker.scale.y = 2. * (r(1) + radius);
+    marker.scale.z = 2. * (r(2) + radius);
 }
 
 int main(int argc, char** argv)
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
         visualization_msgs::Marker marker;
 
         marker.header.stamp = ros::Time::now();
-        marker.header.frame_id = "camera_link";   // not sure
+        marker.header.frame_id = "camera_depth_frame";   // not sure
 
         marker.action = visualization_msgs::Marker::ADD;
 
@@ -107,10 +107,11 @@ int main(int argc, char** argv)
 
             const pcml::FutureObstacleDistribution& obstacle = future_obstacle_distributions.obstacles[i];
 
+            const double& radius = obstacle.radius;
             const Eigen::Vector3d position( obstacle.obstacle_point.x, obstacle.obstacle_point.y, obstacle.obstacle_point.z );
             const Eigen::Matrix3d covariance = Eigen::Map<const Eigen::Matrix<double, 3, 3, Eigen::RowMajor> >(&obstacle.obstacle_covariance[0]);
 
-            generateEllipsoidMarker(position, covariance, marker);
+            generateEllipsoidMarker(radius, position, covariance, marker);
 
             marker.color.a = obstacle.weight;
 

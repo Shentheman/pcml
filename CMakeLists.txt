@@ -153,6 +153,9 @@ include_directories(
   lib
   ${catkin_INCLUDE_DIRS}
 )
+link_directories(
+  lib
+)
 
 ## Declare a C++ library
 add_library(pcml
@@ -160,6 +163,7 @@ add_library(pcml
   src/data/skeleton_stream.cpp
   src/learning/train_future_motion.cpp
   src/learning/spgp.cpp
+  src/util/future_obstacle_listener.cpp
   
   # libsvm
   lib/libsvm/svm.cpp
@@ -179,6 +183,7 @@ add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
 add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
 add_executable(train_cad120 src/train_cad120.cpp)
 add_executable(infer_cad120 src/infer_cad120.cpp)
+add_executable(train_had src/train_had.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
@@ -199,6 +204,7 @@ target_link_libraries(future_obstacle_publisher pcml)
 target_link_libraries(future_obstacle_visualizer pcml)
 target_link_libraries(train_cad120 pcml)
 target_link_libraries(infer_cad120 pcml)
+target_link_libraries(train_had pcml)
 
 #############
 ## Install ##

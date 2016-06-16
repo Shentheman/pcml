@@ -44,7 +44,7 @@ protected:
 
     inline virtual std::string getFrameId()
     {
-        return "/camera_link";
+        return "camera_link";
     }
 
     bool finished_;
@@ -89,9 +89,14 @@ public:
      *   ...
      *   joint_position[?][0] ... joint_position[?][num_joints-1] (until EOF)
      */
-    SkeletonFileStream(const std::string& filename);
-    SkeletonFileStream(const std::string& filename, const std::vector<std::string>& joint_names);
+    SkeletonFileStream();
+    SkeletonFileStream(const std::vector<std::string>& joint_names);
     ~SkeletonFileStream();
+    
+    inline void setFilename(const std::string& filename)
+    {
+        filename_ = filename;
+    }
 
     virtual bool getSkeleton(Eigen::Matrix3Xd& skeleton);
 
@@ -159,7 +164,7 @@ private:
 
     inline virtual std::string getFrameId()
     {
-        return "/camera_depth_frame";
+        return "camera_depth_frame";
     }
 
     int getUserId();

@@ -148,7 +148,7 @@ void SkeletonStream::renderSkeleton(const Eigen::Matrix3Xd& skeleton)
 }
 
 
-// SkeletonFileStream
+// SkeletonFileStreamAbstract
 SkeletonFileStreamAbstract::SkeletonFileStreamAbstract()
     : SkeletonFileStreamAbstract(jointNamesWholeBody())
 {
@@ -167,15 +167,14 @@ bool SkeletonFileStreamAbstract::getSkeleton(Eigen::Matrix3Xd& skeleton)
 
 
 // SkeletonFileStream
-SkeletonFileStream::SkeletonFileStream(const std::string& filename)
-    : SkeletonFileStream(filename, jointNamesWholeBody())
+SkeletonFileStream::SkeletonFileStream()
+    : SkeletonFileStream(jointNamesWholeBody())
 {
 }
 
-SkeletonFileStream::SkeletonFileStream(const std::string& filename, const std::vector<std::string> &joint_names)
+SkeletonFileStream::SkeletonFileStream(const std::vector<std::string> &joint_names)
     : SkeletonFileStreamAbstract(joint_names)
 {
-    filename_ = filename;
     fp_ = NULL;
 }
 
@@ -298,7 +297,6 @@ bool SkeletonCAD120Stream::getSkeleton(Eigen::Matrix3Xd& skeleton)
         {
             // joint name could not be found in conversion map
             fprintf(stderr, "ERROR: %s is not found in CAD120 joint name conversion map\n", joint_names_[i].c_str());
-            fflush(stderr);
             return false;
         }
 
@@ -309,7 +307,6 @@ bool SkeletonCAD120Stream::getSkeleton(Eigen::Matrix3Xd& skeleton)
         {
             // joint name is not defined in CAD120
             fprintf(stderr, "ERROR: %s is not defined in CAD120\n", cad120_joint_name.c_str());
-            fflush(stderr);
             return false;
         }
 
