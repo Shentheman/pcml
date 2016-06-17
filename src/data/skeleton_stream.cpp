@@ -362,16 +362,27 @@ bool SkeletonRealtimeStream::getSkeleton(Eigen::Matrix3Xd& skeleton)
     skeleton.resize(Eigen::NoChange, joint_names_.size());
     for (int i=0; i<joint_names_.size(); i++)
     {
-        tf::StampedTransform transform;
-        try
+        ros::Time time;
+        std::string error_string;
+        if (listener_.getLatestCommonTime("camera_depth_frame", joint_names_[i] + "_" + id_string, time, &error_string) != tf::NO_ERROR)
         {
-            listener_.lookupTransform("camera_depth_frame", joint_names_[i] + "_" + id_string, ros::Time(0), transform);
-            tf::Vector3 p = transform.getOrigin();
-            skeleton.col(i) = Eigen::Vector3d(p.x(), p.y(), p.z());
-        }
-        catch (tf::TransformException ex)
-        {
+            ROS_ERROR("Skeleton realtime stream error TF error: %s", error_string.c_str());
             return false;
+        }
+        else
+        {
+            try
+            {
+                tf::StampedTransform transform;
+                listener_.lookupTransform("camera_depth_frame", joint_names_[i] + "_" + id_string, ros::Time(0), transform);
+                tf::Vector3 p = transform.getOrigin();
+                skeleton.col(i) = Eigen::Vector3d(p.x(), p.y(), p.z());
+            }
+            catch (tf::TransformException ex)
+            {
+                ROS_ERROR("Skeleton realtime stream error: %s", ex.what());
+                return false;
+            }
         }
     }
 
@@ -388,8 +399,13 @@ int SkeletonRealtimeStream::getUserId()
 
         try
         {
-            listener_.lookupTransform("camera_depth_frame", joint_names_[0] + "_" + id_string,
-                                   ros::Time(0), transform);
+            ros::Time time;
+            std::string error_string;
+            if (listener_.getLatestCommonTime("camera_depth_frame", joint_names_[0] + "_" + id_string, time, &error_string) != tf::NO_ERROR)
+            {
+                listener_.lookupTransform("camera_depth_frame", joint_names_[0] + "_" + id_string,
+                                       time, transform);
+            }
             return id;
         }
         catch (tf::TransformException ex)

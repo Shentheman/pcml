@@ -7,9 +7,36 @@
 #include <ros/ros.h>
 
 
+std::vector<std::pair<std::string, double> > radii =
+{
+    {"head"          , 0.10},
+    {"neck"          , 0.05},
+    {"torso"         , 0.15},
+    {"left_shoulder" , 0.05},
+    {"left_elbow"    , 0.05},
+    {"left_hand"     , 0.05},
+    {"right_shoulder", 0.05},
+    {"right_elbow"   , 0.05},
+    {"right_hand"    , 0.05},
+};
+
+std::vector<std::pair<const char*, const char*> > edges =
+{
+    {"head", "neck"},
+    {"neck", "torso"},
+    {"neck", "left_shoulder"},
+    {"left_shoulder", "left_elbow"},
+    {"left_elbow", "left_hand"},
+    {"neck", "right_shoulder"},
+    {"right_shoulder", "right_elbow"},
+    {"right_elbow", "right_hand"},
+};
+
 // simply generated distributions as same as input
 static pcml::FutureObstacleDistributions getFutureObstacleDistributionsMessage(const std::vector<std::string>& joint_names, const Eigen::Matrix3Xd joints)
 {
+    const int num_samples = 2;
+
     pcml::FutureObstacleDistributions msg;
     pcml::FutureObstacleDistribution obstacle;
 
@@ -18,25 +45,54 @@ static pcml::FutureObstacleDistributions getFutureObstacleDistributionsMessage(c
     // not sure the frame id
     msg.header.frame_id = "camera_depth_frame";
 
+    for (int j=0; j<9; j++)
+        obstacle.obstacle_covariance[j] = 0;
+    obstacle.obstacle_covariance[0] = 0.05;
+    obstacle.obstacle_covariance[4] = 0.05;
+    obstacle.obstacle_covariance[8] = 0.05;
+
     for (double t = 0; t <= 1; t += 1)
     {
         obstacle.future_time = t;
-        for (int i=0; i<joint_names.size(); i++)
+        for (int i=0; i<edges.size(); i++)
         {
-            obstacle.obstacle_point.x = joints(0,i);
-            obstacle.obstacle_point.y = joints(1,i);
-            obstacle.obstacle_point.z = joints(2,i);
+            int joint0;
+            int joint1;
+            for (int j=0; j<joint_names.size(); j++)
+            {
+                if (joint_names[j] == edges[i].first)
+                    joint0 = j;
+                if (joint_names[j] == edges[i].second)
+                    joint1 = j;
+            }
 
-            for (int j=0; j<9; j++)
-                obstacle.obstacle_covariance[j] = 0;
-            obstacle.obstacle_covariance[0] = 0.05;
-            obstacle.obstacle_covariance[4] = 0.05;
-            obstacle.obstacle_covariance[8] = 0.05;
+            double r0;
+            double r1;
+            for (int j=0; j<radii.size(); j++)
+            {
+                if (joint_names[joint0] == radii[j].first)
+                    r0 = radii[j].second;
+                if (joint_names[joint1] == radii[j].first)
+                    r1 = radii[j].second;
+            }
 
-            obstacle.weight = 1.0;
-            obstacle.radius = 0.05;
+            const Eigen::Vector3d p0 = joints.col(joint0);
+            const Eigen::Vector3d p1 = joints.col(joint1);
+            for (int j=0; j<num_samples; j++)
+            {
+                const double u = (j+0.5) / num_samples;
+                const double radius = (1.-u) * r0 + u * r1;
+                const Eigen::Vector3d position = (1.-u) * p0 + u * p1;
 
-            msg.obstacles.push_back(obstacle);
+                obstacle.obstacle_point.x = position(0);
+                obstacle.obstacle_point.y = position(1);
+                obstacle.obstacle_point.z = position(2);
+
+                obstacle.weight = 1.0;
+                obstacle.radius = radius;
+
+                msg.obstacles.push_back(obstacle);
+            }
         }
     }
 
