@@ -64,7 +64,7 @@ $ roslaunch pcml future_obstacle_publisher
  * Modify .launch file parameters
 
 ## Run with Kinect v2 skeleton stream
-* install kinect_network package (github: https://github.com/pjsdream/kinect_network)
+* install kinect_network package (github: https://github.com/pjsdream/kinect_network)  
 $ roslaunch kinect_network ip:=(...) port:=(...)  
 $ roslaunch pcml kinect2_obstacle_publisher
 
