@@ -21,9 +21,10 @@ Point Cloud and Machine Learning
    $ cmake ..
    $ make
  * Copy include/yaml-cpp directory and libyaml-cpp.a to pcml/lib directory
-* CAD120 dataset (optional)
+* (optional) CAD120 dataset
  * Fix inconsistency:  
    1. Subject1_annotations/having_meal/0510182019_obj1.txt, delete the last line starting '500,'.
+* (optional) kinect_network package (github: https://github.com/pjsdream/kinect_network)
 
 ## Components
 * msgs
@@ -61,6 +62,11 @@ $ rosrun rviz rviz
 $ roslaunch pcml future_obstacle_publisher  
  * Make the openni_tracker track somebody
  * Modify .launch file parameters
+
+## Run with Kinect v2 skeleton stream
+* install kinect_network package (github: https://github.com/pjsdream/kinect_network)
+$ roslaunch kinect_network ip:=(...) port:=(...)  
+$ roslaunch pcml kinect2_obstacle_publisher
 
 ## Train model (not complete yet)
 * Run 'train' executable with '-d MODEL_DIRECTORY_PATH' option (required)
