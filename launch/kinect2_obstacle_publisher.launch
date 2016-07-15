@@ -1,6 +1,6 @@
 <launch>
   <!-- future obstacle publisher -->
-  <node name="kinect2_obstacle_publisher" pkg="pcml" type="kinect2_obstacle_publisher" output="screen">
+  <node name="kinect2_obstacle_publisher" pkg="pcml" type="kinect_obstacle_publisher" output="screen">
   </node>
 
   <!-- future obstacle visualizer -->

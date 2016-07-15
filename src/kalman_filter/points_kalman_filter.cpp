@@ -12,7 +12,7 @@ PointsKalmanFilterPredictor::PointsKalmanFilterPredictor()
 
     B_.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
 
-    C_.block(3, 3, 3, 3) = Eigen::Matrix3d::Identity();
+    C_.block(0, 0, 3, 3) = Eigen::Matrix3d::Identity();
     C_.block(0, 3, 3, 3) = Eigen::Matrix3d::Zero();
 
     setDeltaT(1. / 15);
@@ -25,6 +25,16 @@ void PointsKalmanFilterPredictor::setDeltaT(double delta_t)
     A_.block(0, 3, 3, 3) = Eigen::Matrix3d::Identity() * delta_t;
 
     B_.block(3, 0, 3, 3) = Eigen::Matrix3d::Identity() * delta_t;
+}
+
+void PointsKalmanFilterPredictor::setDiagonalMeasurementNoise(double d)
+{
+    R_ = Eigen::Matrix<double, 6, 6>::Identity() * d;
+}
+
+void PointsKalmanFilterPredictor::setDiagonalControlNoise(double d)
+{
+    Q_ = Eigen::Matrix3d::Identity() * d;
 }
 
 void PointsKalmanFilterPredictor::iterate(const std::vector<Eigen::Vector3d> &z, const std::vector<Eigen::Vector3d> &u)
@@ -63,7 +73,7 @@ void PointsKalmanFilterPredictor::updateControlAndMeasurements(const std::vector
     }
 }
 
-void PointsKalmanFilterPredictor::predict(double time, std::vector<Eigen::Matrix<double, 6, 1> >& mu, std::vector<Eigen::Matrix<double, 6, 6> >& sigma)
+void PointsKalmanFilterPredictor::predict(double time, const std::vector<Eigen::Vector3d> &u, std::vector<Eigen::Matrix<double, 6, 1> >& mu, std::vector<Eigen::Matrix<double, 6, 6> >& sigma)
 {
     if (time == 0.)
     {
@@ -86,7 +96,7 @@ void PointsKalmanFilterPredictor::predict(double time, std::vector<Eigen::Matrix
 
         for (int i=0; i<mu.size(); i++)
         {
-            mu[i] = A * mus_[i]; // assuming control input u = 0. control input should be dealt with in caller
+            mu[i] = A * mus_[i] + B * u[i];
             sigma[i] = A * sigmas_[i] * A.transpose() + R_;
         }
     }

@@ -24,6 +24,8 @@ add_custom_target(dummy_${PROJECT_NAME} SOURCES ${extra_files})
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf
+  cmake_modules
+  eigen_conversions
   message_generation
   std_msgs
   geometry_msgs
@@ -161,7 +163,7 @@ link_directories(
 add_library(pcml
   src/data/cad120_reader.cpp
   src/data/skeleton_stream.cpp
-  src/data/kinect2_skeleton_stream.cpp
+  src/data/kinect_skeleton_stream.cpp
   src/learning/train_future_motion.cpp
   src/learning/spgp.cpp
   src/util/future_obstacle_listener.cpp
@@ -184,7 +186,7 @@ add_library(pcml
 #add_executable(test_skeleton_stream src/test_skeleton_stream.cpp)
 #add_executable(test_spgp src/test_spgp.cpp)
 add_executable(virtual_human_publisher src/virtual_human_publisher.cpp)
-add_executable(kinect2_obstacle_publisher src/kinect2_obstacle_publisher.cpp)
+add_executable(kinect_obstacle_publisher src/kinect_obstacle_publisher.cpp)
 add_executable(future_obstacle_publisher src/future_obstacle_publisher.cpp)
 add_executable(future_obstacle_visualizer src/future_obstacle_visualizer.cpp)
 add_executable(train_cad120 src/train_cad120.cpp)
@@ -207,7 +209,7 @@ target_link_libraries(pcml
 #target_link_libraries(test_skeleton_stream pcml)
 #target_link_libraries(test_spgp pcml)
 target_link_libraries(virtual_human_publisher pcml)
-target_link_libraries(kinect2_obstacle_publisher pcml)
+target_link_libraries(kinect_obstacle_publisher pcml)
 target_link_libraries(future_obstacle_publisher pcml)
 target_link_libraries(future_obstacle_visualizer pcml)
 target_link_libraries(train_cad120 pcml)

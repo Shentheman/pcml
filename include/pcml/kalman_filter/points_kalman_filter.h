@@ -20,9 +20,11 @@ public:
     PointsKalmanFilterPredictor();
 
     void setDeltaT(double delta_t);
+    void setDiagonalMeasurementNoise(double d);
+    void setDiagonalControlNoise(double d);
 
     void iterate(const std::vector<Eigen::Vector3d>& z, const std::vector<Eigen::Vector3d> &u);
-    void predict(double time, std::vector<Eigen::Matrix<double, 6, 1> >& mu, std::vector<Eigen::Matrix<double, 6, 6> >& sigma);
+    void predict(double time, const std::vector<Eigen::Vector3d> &u, std::vector<Eigen::Matrix<double, 6, 1> >& mu, std::vector<Eigen::Matrix<double, 6, 6> >& sigma);
 
 private:
 
