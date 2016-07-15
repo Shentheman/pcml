@@ -42,9 +42,23 @@ void generateEllipsoidMarker(double radius, const Eigen::Vector3d& position, con
     marker.pose.orientation.z = q.z();
     marker.pose.orientation.w = q.w();
 
-    marker.scale.x = 2. * (r(0) + radius);
-    marker.scale.y = 2. * (r(1) + radius);
-    marker.scale.z = 2. * (r(2) + radius);
+    /*
+    chi_square_3d_table_[0.95 ] =  0.35;
+    chi_square_3d_table_[0.90 ] =  0.58;
+    chi_square_3d_table_[0.80 ] =  1.01;
+    chi_square_3d_table_[0.70 ] =  1.42;
+    chi_square_3d_table_[0.50 ] =  2.37;
+    chi_square_3d_table_[0.30 ] =  3.66;
+    chi_square_3d_table_[0.20 ] =  4.64;
+    chi_square_3d_table_[0.10 ] =  6.25;
+    chi_square_3d_table_[0.05 ] =  7.82;
+    chi_square_3d_table_[0.01 ] = 11.34;
+    chi_square_3d_table_[0.001] = 16.27;
+    */
+
+    marker.scale.x = 2. * (7.82 * std::sqrt(r(0)) + radius);
+    marker.scale.y = 2. * (7.82 * std::sqrt(r(1)) + radius);
+    marker.scale.z = 2. * (7.82 * std::sqrt(r(2)) + radius);
 }
 
 int main(int argc, char** argv)
@@ -91,7 +105,7 @@ int main(int argc, char** argv)
         visualization_msgs::Marker marker;
 
         marker.header.stamp = ros::Time::now();
-        marker.header.frame_id = "camera_depth_frame";   // not sure
+        marker.header.frame_id = future_obstacle_distributions.header.frame_id;   // not sure
 
         marker.action = visualization_msgs::Marker::ADD;
 
@@ -114,11 +128,6 @@ int main(int argc, char** argv)
             generateEllipsoidMarker(radius, position, covariance, marker);
 
             marker.color.a = obstacle.weight;
-
-            // radius of body joint
-            marker.scale.x += 0.1;
-            marker.scale.y += 0.1;
-            marker.scale.z += 0.1;
 
             marker_array.markers.push_back( marker );
         }

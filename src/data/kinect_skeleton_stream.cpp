@@ -27,7 +27,7 @@ void KinectSkeletonStream::read()
         tf::StampedTransform transform;
         try
         {
-            transform_listener_.lookupTransform("kinect_depth_frame", joint_names_[i], time, transform);
+            transform_listener_.lookupTransform("map", joint_names_[i], time, transform);
 
             tf::Vector3 position = transform.getOrigin();
             joint_positions_[i] = Eigen::Vector3d(position.x(), position.y(), position.z());

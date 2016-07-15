@@ -12,10 +12,10 @@
 int main(int argc, char** argv)
 {
     const double length_max_variation = 1.1;
-    const double future_time = 2.;
+    const double future_time = 3.;
     const int future_frames = 10;
 
-    ros::init(argc, argv, "kinect_obstacle_publisher");
+    ros::init(argc, argv, "kinect2_obstacle_publisher");
 
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
@@ -53,7 +53,7 @@ int main(int argc, char** argv)
     // predictor
     pcml::PointsKalmanFilterPredictor predictor;
     predictor.setDeltaT(rate.expectedCycleTime().toSec());
-    predictor.setDiagonalMeasurementNoise(0.003);
+    predictor.setDiagonalMeasurementNoise(0.0001);
     predictor.setDiagonalControlNoise(0.0001);
 
     // publisher
