@@ -1,0 +1,11 @@
+<launch>
+  <arg name="sequence" default="1"/>
+
+  <!-- future obstacle publisher -->
+  <node name="recorded_obstacle_publisher" pkg="pcml" type="recorded_obstacle_publisher" args="$(arg sequence)" output="screen">
+  </node>
+
+  <!-- future obstacle visualizer -->
+  <node name="future_obstacle_visualizer" pkg="pcml" type="future_obstacle_visualizer" output="screen">
+  </node>
+</launch>
