@@ -183,7 +183,7 @@ int main(int argc, char** argv)
             frame = 0;
 
             first = true;
-            predictor.clear();
+            //predictor.clear();
         }
     }
 
