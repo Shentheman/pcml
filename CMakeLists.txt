@@ -18,6 +18,14 @@ FOREACH(child ${children})
 ENDFOREACH()
 add_custom_target(dummy_${PROJECT_NAME} SOURCES ${extra_files})
 
+
+# Tell cmake we will need dlib.  This command will pull in dlib and compile it
+# into your project.  Note that you don't need to compile or install dlib.  All
+# cmake needs is the dlib source code folder and it will take care of everything.
+add_subdirectory(/home/shen/Downloads/dlib-19.8 dlib_build)
+
+
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -39,6 +47,23 @@ find_package(cmake_modules REQUIRED)
 
 # eigen
 find_package(Eigen REQUIRED)
+
+# FindPkgConfig is used for finding an external library 
+# if CMake doesn't have a module that aids in finding this package 
+# (https://cmake.org/Wiki/CMake:How_To_Find_Libraries)
+include(FindPkgConfig)
+
+pkg_check_modules(YamlCpp REQUIRED yaml-cpp)
+if (${YamlCpp_VERSION} VERSION_LESS 0.5.0)
+  message(FATAL_ERROR "yaml-cpp >= 0.5.0 required")
+endif ()
+IF(YamlCpp_FOUND)
+  MESSAGE("YamlCpp information")
+  MESSAGE("YamlCpp_INCLUDE_DIRS: ${YamlCpp_INCLUDE_DIRS}")
+  MESSAGE("YamlCpp_LIBRARIES: ${YamlCpp_LIBRARIES}")
+  MESSAGE("YamlCpp DEFINITIONS: ${YamlCpp_DEFINITIONS}")
+ENDIF()
+
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -154,6 +179,7 @@ include_directories(
   include
   lib
   ${catkin_INCLUDE_DIRS}
+  ${YamlCpp_INCLUDE_DIRS}
 )
 link_directories(
   lib
@@ -203,8 +229,9 @@ add_executable(train_had src/train_had.cpp)
 #   ${catkin_LIBRARIES}
 # )
 target_link_libraries(pcml
-  yaml-cpp
   ${catkin_LIBRARIES}
+  ${YamlCpp_LIBRARIES}
+  dlib::dlib
 )
 #target_link_libraries(test_cad120 pcml)
 #target_link_libraries(test_skeleton_stream pcml)
@@ -240,11 +267,11 @@ target_link_libraries(train_had pcml)
 # )
 
 ## Mark cpp header files for installation
-install(DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-)
+#install(DIRECTORY include/${PROJECT_NAME}/
+  #DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  #FILES_MATCHING PATTERN "*.h"
+  #PATTERN ".svn" EXCLUDE
+#)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES
