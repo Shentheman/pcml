@@ -22,7 +22,7 @@ add_custom_target(dummy_${PROJECT_NAME} SOURCES ${extra_files})
 # Tell cmake we will need dlib.  This command will pull in dlib and compile it
 # into your project.  Note that you don't need to compile or install dlib.  All
 # cmake needs is the dlib source code folder and it will take care of everything.
-add_subdirectory(/home/shen/Downloads/dlib-19.8 dlib_build)
+add_subdirectory(../dlib dlib_build)
 
 
 
